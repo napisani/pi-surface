@@ -1,0 +1,8 @@
+.layout{display:grid;grid-template-columns:minmax(340px,440px) minmax(0,1fr);gap:16px;align-items:start}
+.list{position:sticky;top:calc(var(--head) + 16px);max-height:calc(100vh - var(--head) - 32px);overflow:auto;padding-right:4px}
+.detail{min-height:300px;scroll-margin-top:calc(var(--head) + 16px)}
+.sumRow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.intent{font-size:13px;margin-top:6px;color:var(--dim)}
+.intent b{color:var(--ink)}
+.sevHead{color:var(--sev);margin:14px 0 6px}
+.details{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin-bottom:12px}

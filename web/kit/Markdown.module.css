@@ -1,0 +1,13 @@
+.md{font-size:13.5px;line-height:1.55;overflow-wrap:anywhere;min-width:0}
+.md p{margin:6px 0}
+.md ul,.md ol{margin:6px 0;padding-left:20px}
+.md :not(pre) > code{font-family:var(--mono);font-size:12px;background:var(--well);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.md pre{font-family:var(--mono);font-size:12px;background:var(--well);border:1px solid var(--line);border-radius:7px;padding:8px 10px;overflow:auto;margin:6px 0}
+.md pre.suggestion{border-color:#3b5a2c;background:#131c10}
+.suggestionLabel{font-size:11px;color:var(--green);margin-top:6px}
+.md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
+.md table{border-collapse:collapse;font-size:12.5px;margin:6px 0;display:block;overflow-x:auto}
+.md th,.md td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+.md th{background:var(--panel2);color:var(--dim);font-weight:600}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{font-size:14px;margin:10px 0 4px;color:var(--ink);text-transform:none;letter-spacing:0}
+.md hr{border:none;border-top:1px solid var(--line);margin:12px 0}

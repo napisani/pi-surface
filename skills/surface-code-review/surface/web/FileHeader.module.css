@@ -1,0 +1,4 @@
+.head{display:flex;gap:8px;align-items:center;padding:7px 10px;background:#1d1c19;border:1px solid var(--line);border-radius:10px 10px 0 0;font-size:13px;margin-top:14px}
+.caret{background:none;border:none;color:var(--dim);cursor:pointer;font:inherit;width:18px}
+.path{font-family:var(--mono);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.viewed{font-size:12px;color:var(--dim);display:flex;gap:4px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:2px 8px;cursor:pointer}

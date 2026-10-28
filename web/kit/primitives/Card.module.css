@@ -1,0 +1,15 @@
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:6px 0}
+.muted{opacity:.75}
+.faded{opacity:.6}
+.draft,.reply{border-left:3px solid var(--amber)}
+.posted{border-left:3px solid var(--teal);opacity:.85}
+.assisting{border-left:3px solid var(--violet)}
+.composer{border-left:3px solid var(--blue)}
+.question{border-left:3px solid var(--violet)}
+.request,.fix{border-left:3px solid var(--teal)}
+.attention{border-left:3px solid var(--high)}
+.remote{border-left:3px solid var(--faint)}
+.empty{border-left:3px solid var(--line)}
+.commit{border-left:3px solid var(--blue)}
+.committed{border-left:3px solid var(--green)}
+.failed{border-left:3px solid var(--rose)}

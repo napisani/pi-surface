@@ -1,0 +1,5 @@
+.list{position:sticky;top:calc(var(--head) + 16px);max-height:calc(100vh - var(--head) - 32px);overflow:auto;padding-right:4px}
+.list h3{margin:14px 0 6px}
+.toggles{display:flex;gap:12px;align-items:center;font-size:12px;color:var(--dim);margin:4px 0}
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:1100px){.list{position:static;max-height:none}}

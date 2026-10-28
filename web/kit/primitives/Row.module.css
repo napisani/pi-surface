@@ -1,0 +1,5 @@
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.row > input:not([type]){flex:1}
+/* Action rows sit in narrow diff annotations too, so their buttons wrap. */
+.end{justify-content:flex-end;flex-wrap:wrap}
+.flush{margin-top:0}

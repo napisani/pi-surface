@@ -1,0 +1,4 @@
+.head{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.title{margin:4px 0 6px}
+.spacer{flex:1}
+.reason{color:var(--faint)}

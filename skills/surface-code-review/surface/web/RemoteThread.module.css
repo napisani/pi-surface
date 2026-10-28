@@ -1,0 +1,2 @@
+.tag{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.msg+.msg{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}

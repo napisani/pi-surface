@@ -1,0 +1,11 @@
+.switch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;color:var(--faint);font-size:12px}
+.chip{font-size:12px;padding:3px 9px;border-radius:12px;border:1px solid var(--line);color:var(--dim);cursor:pointer;background:none;font-family:inherit}
+.chip.on{color:var(--ink);border-color:#625e5a;background:var(--panel2)}
+.status{font-family:var(--mono);font-size:10px;margin-left:4px;color:var(--faint)}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);margin-top:12px}
+.side{display:grid;gap:16px;align-content:start}
+.answer{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:4px}
+.answer input{flex:1}
+.pick{color:var(--ink);text-transform:none;letter-spacing:0}
+.why{color:var(--dim);font-size:12px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}

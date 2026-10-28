@@ -1,0 +1,9 @@
+.header{display:flex;align-items:center;gap:12px;padding:0 20px;height:var(--head);border-bottom:1px solid var(--line);background:var(--well);position:sticky;top:0;z-index:20;white-space:nowrap;overflow:hidden}
+.brand{font-family:var(--mono);color:var(--amber);font-weight:600}
+.conn{font-size:12px;color:var(--faint)}
+.live{color:var(--teal)}
+.down{color:var(--rose)}
+.tabs{margin-left:auto;display:flex;gap:4px}
+.tab{background:none;border:1px solid transparent;color:var(--dim);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit;display:flex;gap:6px;align-items:center}
+.on{border-color:var(--line);background:var(--panel);color:var(--ink)}
+.count{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:0 6px;color:var(--dim)}

@@ -1,0 +1,7 @@
+.dims{width:100%;border-collapse:collapse;font-size:13px;flex:1 1 240px;min-width:0}
+.dims td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.label{width:44%}
+.why{color:var(--dim);font-size:12px}
+.score{display:inline-flex;gap:2px}
+.score i{width:9px;height:9px;border-radius:2px;background:#2d2c29}
+.score i.on{background:var(--c)}

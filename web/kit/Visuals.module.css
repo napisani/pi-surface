@@ -1,0 +1,8 @@
+.vis{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:8px 0;background:#15171b}
+.tabs{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.tab{background:none;border:1px solid transparent;color:var(--dim);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit;font-size:13px;display:flex;gap:6px;align-items:center}
+.on{background:var(--panel2);border-color:var(--hover-line);color:var(--ink)}
+.kind{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.body{padding:12px;overflow:auto}
+.look{font-size:12px;color:var(--teal);padding:0 12px 10px}
+.look::before{content:"Notice: ";color:var(--faint)}

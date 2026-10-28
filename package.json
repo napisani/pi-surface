@@ -1,0 +1,64 @@
+{
+  "name": "pi-surface",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/napisani/pi-surface.git"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "description": "Pi extension that hosts skill-defined browser workflows: forge design sessions, code review and PR feedback.",
+  "pi": {
+    "extensions": [
+      "./extension/index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  },
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "node -e \"require('node:fs').rmSync('web/dist',{recursive:true,force:true})\" && esbuild forge=skills/surface-forge-solution/surface/web/main.tsx review=skills/surface-code-review/surface/web/main.tsx feedback=skills/surface-pr-feedback/surface/web/main.tsx --bundle --splitting --format=esm --target=es2022 --jsx=automatic --minify --sourcemap --outdir=web/dist --entry-names=[name] --chunk-names=chunk-[hash]",
+    "test": "node --test 'test/**/*.test.ts' 'skills/*/surface/test/*.test.ts'",
+    "test:web": "node --import tsx --import ./test/web/dom.ts --test 'web/kit/**/*.test.tsx' 'skills/*/surface/web/*.test.tsx'",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "oxlint .",
+    "check": "npm run typecheck && npm run build && npm test && npm run test:web"
+  },
+  "dependencies": {
+    "@pierre/diffs": "1.6.1",
+    "esbuild": "0.28.2",
+    "hast-util-to-jsx-runtime": "2.3.6",
+    "mdast-util-to-hast": "13.2.1",
+    "mermaid": "12.2.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.2.0",
+    "@happy-dom/global-registrator": "21.0.4",
+    "@oxlint/plugins": "1.78.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/hast": "3.0.5",
+    "@types/mdast": "4.0.4",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "21.0.4",
+    "oxlint": "^1.81.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

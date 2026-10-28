@@ -1,0 +1,5 @@
+.delta{display:grid;grid-template-columns:150px 1fr 54px;gap:6px 10px;align-items:center;font-size:12px}
+.bar{height:8px;background:#2a2927;border-radius:4px;position:relative}
+.fill,.axis{position:absolute;top:0;bottom:0;border-radius:4px}
+.axis{left:50%;width:1px;background:#625e5a}
+.value{font-family:var(--mono)}

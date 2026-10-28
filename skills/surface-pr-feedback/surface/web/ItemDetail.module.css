@@ -1,0 +1,2 @@
+.head{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.id{font-family:var(--mono);font-weight:700;color:var(--amber);font-size:16px}

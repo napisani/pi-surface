@@ -1,0 +1,7 @@
+.wrap{overflow:auto}
+.table{border-collapse:collapse;font-size:12.5px;margin:6px 0}
+.table th,.table td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+.table th{background:var(--panel2);color:var(--dim);font-weight:600}
+.table caption{caption-side:top;text-align:left;color:var(--dim);font-size:12px;padding-bottom:4px}
+.good td{background:var(--ok-bg)}
+.bad td{background:var(--bad-bg)}

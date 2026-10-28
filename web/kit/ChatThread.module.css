@@ -1,0 +1,5 @@
+.thread{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.msg{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.user{background:#1c2029;align-self:flex-end;max-width:85%}
+.agent{background:var(--panel2)}
+.who{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-right:6px}

@@ -1,0 +1,8 @@
+.doc{font-size:14px;line-height:1.6;min-width:0}
+.doc h1,.doc h2,.doc h3,.doc h4{color:var(--ink);scroll-margin-top:80px;text-transform:none;letter-spacing:0}
+.doc h1{font-size:20px;margin:0 0 10px}
+.doc h2{font-size:16px;margin:22px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.doc h3{font-size:14px;margin:16px 0 6px;font-weight:600}
+.doc h4{font-size:13px;margin:12px 0 4px}
+.doc hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.tbd{background:#3a2224;color:#f0b3b5;border:1px solid #6a3a3c;border-radius:4px;padding:0 4px;font-family:var(--mono);font-size:.85em;white-space:nowrap;scroll-margin-top:90px}

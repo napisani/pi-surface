@@ -1,0 +1,2 @@
+.banner{border-left:3px solid var(--green);background:#17241a;padding:10px 12px;border-radius:0 7px 7px 0;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.blue{border-color:var(--blue);background:#17202a}

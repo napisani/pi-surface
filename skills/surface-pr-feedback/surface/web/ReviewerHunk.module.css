@@ -1,0 +1,4 @@
+.frame{border:1px solid var(--line);border-radius:9px;margin:8px 0;overflow:hidden}
+.head{display:flex;gap:8px;align-items:center;padding:6px 10px;background:var(--panel2);font-size:12px}
+.role{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.path{font-family:var(--mono)}

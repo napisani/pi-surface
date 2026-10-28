@@ -1,0 +1,3 @@
+.chip{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:color-mix(in srgb,var(--sev) 10%,var(--panel));border:1px solid color-mix(in srgb,var(--sev) 45%,transparent);color:var(--ink);border-radius:8px;padding:6px 10px;margin:6px 0;cursor:pointer;font:inherit;font-size:13px}
+.chip b{color:var(--sev)}
+.open{margin-left:auto;color:var(--faint)}

@@ -1,0 +1,7 @@
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.value{font:600 26px/1 var(--mono)}
+.key{color:var(--dim);font-size:12px;margin-top:6px}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+.note{text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}

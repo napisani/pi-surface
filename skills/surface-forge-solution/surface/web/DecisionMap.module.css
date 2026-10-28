@@ -1,0 +1,14 @@
+.round{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.round:last-child{border-bottom:none}
+.label{flex:none;width:64px;font-family:var(--mono);font-size:11px;color:var(--faint);padding-top:8px}
+.cards{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
+.card{display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--faint);border-radius:7px;padding:7px 10px;cursor:pointer;max-width:280px;min-width:170px}
+.card:hover{border-color:var(--hover-line)}
+.open{border-left-color:var(--amber)}.answered{border-left-color:var(--green)}.deferred{border-left-color:var(--blue)}
+.top{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600}
+.status{margin-left:auto;font-weight:400}
+.id{font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
+.choice{font-size:12px;color:var(--ink)}
+.open .choice{color:var(--amber)}
+.dep{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.why{color:var(--dim);font-size:12px}

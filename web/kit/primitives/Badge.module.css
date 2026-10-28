@@ -1,0 +1,17 @@
+.badge{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--dim);font-family:var(--mono);white-space:nowrap;background:none}
+.mini{font-size:10px;padding:0 5px;border-radius:8px}
+button.badge{cursor:pointer}
+.link{color:var(--violet);border-color:#4f4470}
+.ok{color:var(--green);border-color:#3f5240}
+.warn{color:var(--high);border-color:#6b5330}
+.err{color:var(--rose);border-color:#6a3a3c}
+.info{color:var(--blue);border-color:#3b4e69}
+.muted{color:var(--faint)}
+.teal{color:var(--teal);border-color:#355a53}
+.violet{color:var(--violet);border-color:#4a4f63}
+.amber{color:var(--amber);border-color:#6b5330}
+.amberFill{color:var(--amber-ink);background:#2e2818;border-color:#6b5f3e}
+.sevCritical{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 45%,transparent)}
+.sevHigh{color:var(--high);border-color:color-mix(in srgb,var(--high) 45%,transparent)}
+.sevMedium{color:var(--med);border-color:color-mix(in srgb,var(--med) 45%,transparent)}
+.sevLow{color:var(--low);border-color:color-mix(in srgb,var(--low) 45%,transparent)}

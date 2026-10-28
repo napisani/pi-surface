@@ -1,0 +1,6 @@
+.banner{border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px;display:flex;gap:8px;align-items:center}
+.warn{border-color:#6b5330;background:#241d12;color:#f0c88a}
+.err{border-color:#6a3a3c;background:#271617;color:#f0b0b2}
+.run{border-color:#355a53;background:#13211e;color:#bfe3da}
+.info{border-color:#3b4e69;background:#17202a;color:var(--ink)}
+.done{border-color:#3f5240;background:var(--ok-bg);color:var(--ink)}

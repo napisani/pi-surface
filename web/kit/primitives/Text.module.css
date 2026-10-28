@@ -1,0 +1,4 @@
+.faint{color:var(--faint)}.dim{color:var(--dim)}.err{color:var(--rose)}.ok{color:var(--green)}.warn{color:var(--high)}.ink{color:var(--ink)}
+.mono{font-family:var(--mono)}
+.small{font-size:12px}
+.strong{font-weight:600}

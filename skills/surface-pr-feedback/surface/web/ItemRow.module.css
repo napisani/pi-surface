@@ -1,0 +1,11 @@
+.row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--panel);cursor:pointer}
+.row:hover{border-color:var(--hover-line)}
+.on{background:var(--panel2);border-color:var(--amber)}
+.hidden{opacity:.5}
+.row input{margin-top:3px}
+.main{min-width:0;flex:1}
+.title{font-size:13px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.title b{font-family:var(--mono);color:var(--amber)}
+.who{color:var(--ink)}
+.text{font-size:13px;color:var(--dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.meta{font-size:11.5px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}

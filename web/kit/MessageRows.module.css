@@ -1,0 +1,5 @@
+.msg{margin-top:8px;display:flex;gap:8px;align-items:baseline}
+.who{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);width:40px;flex:none}
+.agent{color:var(--ink)}
+.user{color:var(--dim)}
+.text{flex:1;min-width:0}

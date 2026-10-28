@@ -1,0 +1,26 @@
+/* The only global stylesheet: theme tokens, a reset and base element styles.
+   Everything else is a CSS module beside the component that uses it. */
+:root{
+  /* Kanagawa dragon, matching the kanagawa-dragon diff theme */
+  --bg:#12120f;--panel:#181616;--panel2:#1d1c19;--line:#2d2c29;--ink:#c5c9c5;--dim:#a6a69c;--faint:#737c73;
+  --well:#0d0c0c;--focus:#59606f;--hover-line:#4a505c;
+  --amber:#c4b28a;--amber-ink:#e6c384;--teal:#8ea4a2;--rose:#c4746e;--violet:#8992a7;--blue:#8ba4b0;--green:#87a987;
+  --crit:#e46876;--high:#dca561;--med:#c4b28a;--low:#8ba4b0;
+  --ok-bg:#17241a;--bad-bg:#2a1718;--ad-ink:#b9d99a;--dl-ink:#e6a3a5;--ad-bg:#1c2a1b;--dl-bg:#2c1a1b;
+  --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace;--sans:"Inter","SF Pro Text",system-ui,sans-serif;
+  --head:52px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+h2{font-size:18px;margin:0 0 4px}
+h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:20px 0 10px;font-weight:600}
+h4{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 8px;font-weight:600}
+input:not([type=checkbox]),textarea{background:var(--well);border:1px solid var(--line);border-radius:7px;color:var(--ink);font:inherit;padding:7px 10px;outline:none;min-width:0}
+input:focus,textarea:focus{border-color:var(--focus)}
+textarea{width:100%;resize:vertical;font-family:var(--mono);font-size:13px;margin-top:8px}
+details>summary{cursor:pointer;color:var(--dim)}
+ul,ol{padding-left:20px}
+diffs-container{--diffs-font-family:var(--mono);--diffs-font-size:12.5px;--diffs-line-height:1.55}

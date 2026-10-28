@@ -1,0 +1,7 @@
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:9px;position:sticky;top:calc(var(--head) + 6px);z-index:3}
+.label{white-space:nowrap;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 8px}
+.lens{text-align:left;background:none;border:1px solid transparent;color:var(--dim);padding:5px 11px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;display:flex;gap:6px;align-items:center}
+.lens:hover{color:var(--ink)}
+.on{background:var(--panel2);border-color:var(--hover-line);color:var(--ink)}
+.kind{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.lens kbd{font-family:var(--mono);font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:3px;padding:0 4px}

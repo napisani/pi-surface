@@ -1,0 +1,9 @@
+.tree{overflow:auto;flex:1;font-size:13px;margin:0 -10px;padding:0 4px}
+.dir{color:var(--dim);cursor:pointer;padding:2px 8px;white-space:nowrap;user-select:none;display:block;width:100%;text-align:left;background:none;border:none;font:inherit}
+.caret{display:inline-block;width:14px;color:var(--faint)}
+.file{display:flex;gap:6px;align-items:center;padding:3px 8px;cursor:pointer;border-radius:5px;white-space:nowrap;width:100%;background:none;border:none;font:inherit;color:inherit;text-align:left}
+.file:hover{background:var(--panel2)}
+.name{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.viewed .name{color:var(--faint);text-decoration:line-through}
+.delta{margin-left:auto}
+.depth0{padding-left:8px}.depth1{padding-left:22px}.depth2{padding-left:36px}.depth3{padding-left:50px}.depth4{padding-left:64px}.depth5{padding-left:78px}
