@@ -13,6 +13,9 @@ export function TradeOffs({ question: q, selectedId, colorOf }: { question: Ques
       <h3>
         Trade-offs <span className={css.note}>· scored for this question only</span>
       </h3>
+      <p className={css.direction}>
+        Higher is better on every row: 5 is the best outcome for this decision. A cost such as scope or risk scores high when the option keeps it small.
+      </p>
       <div className={css.wrap}>
         <Radar dims={q.dimensions.map((d) => d.label)} series={series} />
         <ScoreTable dimensions={q.dimensions} option={q.options[selectedIndex]} color={colorOf(selectedIndex)} />
@@ -24,7 +27,7 @@ export function TradeOffs({ question: q, selectedId, colorOf }: { question: Ques
             {o.label}
           </span>
         ))}
-        <span className={css.faint}>Scores compare these options only. Outer ring is better.</span>
+        <span className={css.faint}>Scores compare these options only. Further out on the radar is better.</span>
       </div>
     </Panel>
   );

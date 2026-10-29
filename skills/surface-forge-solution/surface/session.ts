@@ -1,4 +1,5 @@
 import type { PatchOp } from "../../../src/host/patch.ts";
+import type { SpecDimension } from "../../../src/kit/options.ts";
 import type { SurfaceContext, WorkflowSession } from "../../../src/host/workflow.ts";
 import { resolveAction, type ForgeAction } from "./actions.ts";
 import { addThreadMessage, postDraft, postRound, reviseOption, setRfcRequested, type DraftKind, type ForgeState, type OptionRevision, type QuestionInput, type ThreadMessage } from "./state.ts";
@@ -26,8 +27,8 @@ export class ForgeSession implements WorkflowSession<ForgeAction> {
   }
 
   /** Posts questions as one round and returns the page URL. */
-  async askRound(questions: QuestionInput[]): Promise<string> {
-    this.#commit(postRound(this.state, questions));
+  async askRound(questions: QuestionInput[], specDimensions: SpecDimension[] = []): Promise<string> {
+    this.#commit(postRound(this.state, questions, specDimensions));
     return this.#ctx.url();
   }
 

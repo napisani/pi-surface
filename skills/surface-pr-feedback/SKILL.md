@@ -42,6 +42,7 @@ Each request arrives as a message starting `Surface · feedback ·` with a `Feed
 |---|---|---|
 | triage N items | Triage per [references/triage.md](references/triage.md). | `surface_feedback_triage` |
 | question about PF-n | Read the code the item points at and what it touches, then answer the latest question in two to five sentences: what the reviewer means, whether they are right, what breaks either way. Earlier messages are context. Add a visual when structure explains it better than prose. | `surface_feedback_answer` |
+| question about PF-n's reply | Answer the latest question about the quoted reply in one to three sentences: why it says what it says, or whether it holds up. Do not rewrite it; revisions arrive as reply assist requests. | `surface_feedback_answer` with `about: "reply"` |
 | fixes, round N | Apply each fix per [Fix rounds](#fix-rounds). | `surface_feedback_fix_update`, once, covering every item |
 | propose commits | Group the fixes per [Commit proposals](#commit-proposals). | `surface_feedback_commits` |
 | reply assist · PF-n | Rewrite the reply as asked, per [references/replies.md](references/replies.md). An empty draft means write it from scratch. | `surface_feedback_reply_draft` |

@@ -120,6 +120,8 @@ export interface FeedbackItem {
   discussion: ThreadMessage[];
   discussionVisuals: LabeledVisual[];
   reply?: Reply;
+  /** Questions about the reply and the agent's answers; absent until the first question. */
+  replyThread?: ThreadMessage[];
   /** Bots' conversation comments start hidden; the user can show any item. */
   hidden: boolean;
   /** The user marked the item finished without posting a reply. */
@@ -555,6 +557,18 @@ export function updateFixes(state: FeedbackState, updates: FixUpdate[], now: str
     throw new SurfaceError(`invalid fix updates:\n- ${errors.join("\n- ")}`);
   }
   return ops;
+}
+
+/** Ops that add a question or answer about an item's reply; the reply itself never changes. */
+export function addReplyMessage(state: FeedbackState, id: string, message: ThreadMessage): PatchOp[] {
+  const entry = itemOf(state, id);
+  if (!entry.reply) {
+    throw new SurfaceError(`${id} has no reply to ask about`);
+  }
+  checkText(message.text, message.role === "user" ? "a question" : "an answer");
+  const p = child(itemPtr(state, id), "replyThread");
+  const next = { ...message, text: message.text.trim() };
+  return [entry.replyThread ? append(p, next) : add(p, [next])];
 }
 
 /** Ops that add a message to an item's discussion with the agent, with any visuals the agent attached. */

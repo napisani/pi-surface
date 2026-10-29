@@ -1,4 +1,16 @@
-import type { QuestionInput } from "../state.ts";
+import type { SpecDimension } from "../../../../src/kit/options.ts";
+import { emptyState, type ForgeState, type QuestionInput } from "../state.ts";
+
+/** The spec dimensions cacheIsolation's options move. */
+export const SPEC_DIMENSIONS: SpecDimension[] = [
+  { id: "size", label: "Implementation size" },
+  { id: "security", label: "Secret exposure reduced", direction: "benefit" },
+];
+
+/** A fresh session whose spec dimensions are already declared. */
+export function declaredState(): ForgeState {
+  return { ...emptyState(), specDimensions: structuredClone(SPEC_DIMENSIONS) };
+}
 
 /** The "Cache isolation" decision from the secret_inject session, trimmed. */
 export function cacheIsolation(): QuestionInput {

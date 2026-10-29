@@ -1,22 +1,23 @@
-import type { Dimension } from "../../src/kit/options.ts";
+import type { SpecDimension } from "../../src/kit/options.ts";
 import css from "./DeltaBars.module.css";
 
-// Security is the one spec dimension where a higher number is the good direction.
-export function deltaColor(dimId: string, v: number): string {
+/** Green for a move the dimension's direction counts as a gain, red for a cost. */
+export function deltaColor(dimension: SpecDimension, v: number): string {
   if (v === 0) {
     return "var(--faint)";
   }
-  return (dimId === "security" ? v < 0 : v > 0) ? "var(--rose)" : "var(--green)";
+  const gain = dimension.direction === "benefit" ? v > 0 : v < 0;
+  return gain ? "var(--green)" : "var(--rose)";
 }
 
-/** Bars from a center line: right adds work or risk, left removes it. */
-export function DeltaBars({ dimensions, deltas, range = 3 }: { dimensions: readonly Dimension[]; deltas: Readonly<Record<string, number>>; range?: number }) {
+/** Bars from a center line, one per spec dimension, colored by whether the move is a gain or a cost. */
+export function DeltaBars({ dimensions, deltas, range = 3 }: { dimensions: readonly SpecDimension[]; deltas: Readonly<Record<string, number>>; range?: number }) {
   const unit = 48 / range;
   return (
     <div className={css.delta}>
       {dimensions.map((d) => {
         const v = deltas[d.id] ?? 0;
-        const color = deltaColor(d.id, v);
+        const color = deltaColor(d, v);
         return [
           <span key={`${d.id}:label`}>{d.label}</span>,
           <div key={`${d.id}:bar`} className={css.bar}>

@@ -1,12 +1,14 @@
 import type { PatchOp } from "../../../src/host/patch.ts";
 import { messageOf, type SurfaceContext, SurfaceError, type WorkflowSession } from "../../../src/host/workflow.ts";
 import type { LabeledVisual } from "../../../src/kit/code.ts";
+import type { ThreadMessage } from "../../../src/kit/thread.ts";
 import { blobRoute, parseDiffFiles } from "../../../src/kit/git.ts";
 import { resolveAction, triageBrief, type PageAction } from "./actions.ts";
 import { commitPaths, containedIn, feedbackDiff, listFeedback, loadTarget, postReply, push, resolveReviewThread, type OpenInput, type PostedReply } from "./github.ts";
 import {
   addChatItems,
   addDiscussion,
+  addReplyMessage,
   commitOf,
   finishCommit,
   finishPosting,
@@ -182,8 +184,17 @@ export class FeedbackSession implements WorkflowSession<PageAction> {
     return { ids, triage: triageBrief(this.state, ids) };
   }
 
-  answer(itemId: string, text: string, visuals: LabeledVisual[] = []): void {
-    this.#commit(addDiscussion(this.state, itemId, { role: "agent", text, at: this.#now() }, visuals));
+  /** An answer in the item's discussion, or, about the reply, in the reply's own thread (text only). */
+  answer(itemId: string, text: string, visuals: LabeledVisual[] = [], about: "item" | "reply" = "item"): void {
+    const message: ThreadMessage = { role: "agent", text, at: this.#now() };
+    if (about === "reply") {
+      if (visuals.length) {
+        throw new SurfaceError("visuals go with questions about the item, not about its reply");
+      }
+      this.#commit(addReplyMessage(this.state, itemId, message));
+      return;
+    }
+    this.#commit(addDiscussion(this.state, itemId, message, visuals));
   }
 
   /** Refreshes the files the agent just edited, then records its outcome for each fix. */

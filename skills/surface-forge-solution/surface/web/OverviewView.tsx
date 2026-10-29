@@ -4,7 +4,7 @@ import { DeltaBars } from "../../../../web/kit/DeltaBars.tsx";
 import { Note } from "../../../../web/kit/primitives/Note.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Sub } from "../../../../web/kit/primitives/Sub.tsx";
-import type { ForgeState, QuestionStatus } from "../state.ts";
+import { specDimensionsOf, type ForgeState, type QuestionStatus } from "../state.ts";
 import { DecisionMap } from "./DecisionMap.tsx";
 import { DecisionTable } from "./DecisionTable.tsx";
 import { DraftPanel } from "./DraftPanel.tsx";
@@ -32,7 +32,8 @@ export function OverviewView() {
     return [{ d, o: q?.options.find((x) => x.id === d.optionId) }];
   });
   const count = (status: QuestionStatus) => state.questions.filter((q) => q.status === status).length;
-  const totals = Object.fromEntries(state.specDimensions.map((dim) => [dim.id, decided.reduce((n, { o }) => n + (o?.specDelta?.[dim.id] ?? 0), 0)]));
+  const dimensions = specDimensionsOf(state);
+  const totals = Object.fromEntries(dimensions.map((dim) => [dim.id, decided.reduce((n, { o }) => n + (o?.specDelta?.[dim.id] ?? 0), 0)]));
   const range = Math.max(3, ...Object.values(totals).map(Math.abs));
   return (
     <>
@@ -55,8 +56,14 @@ export function OverviewView() {
           <h3>
             Net effect on the spec <span className={css.note}>· sum of your decided choices</span>
           </h3>
-          <DeltaBars dimensions={state.specDimensions} deltas={totals} range={range} />
-          <Note>Bars to the right add work or risk. Bars to the left remove it. Secret exposure reduced is the exception: right is better.</Note>
+          {dimensions.length ? (
+            <>
+              <DeltaBars dimensions={dimensions} deltas={totals} range={range} />
+              <Note>Green moves are gains and red ones costs, by what each dimension measures. The agent adds dimensions as questions raise them.</Note>
+            </>
+          ) : (
+            <Note>No spec dimensions yet: the agent names them with its questions, from what this solution trades.</Note>
+          )}
         </Panel>
       </div>
       <DraftPanel />

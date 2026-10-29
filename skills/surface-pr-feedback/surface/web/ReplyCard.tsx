@@ -2,7 +2,9 @@
 // then post it (only on the user's click) or copy it.
 import { useState, type ReactNode } from "react";
 import { AssistBox } from "../../../../web/kit/AssistBox.tsx";
+import { ChatThread } from "../../../../web/kit/ChatThread.tsx";
 import { DRAFT_LABEL, DraftCard } from "../../../../web/kit/DraftCard.tsx";
+import { AskRow } from "../../../../web/kit/primitives/AskRow.tsx";
 import { Badge, DRAFT_TONE } from "../../../../web/kit/primitives/Badge.tsx";
 import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { Card } from "../../../../web/kit/primitives/Card.tsx";
@@ -133,10 +135,24 @@ export function ReplyCard({ item, location }: { item: FeedbackItem; location?: b
             </details>
           ) : null}
           <CommitLine item={item} />
+          <ReplyQuestions item={item} />
         </>
       }
       actions={<ReplyActions item={item} body={reply.body} github={Boolean(pr) && !chat} blocker={blocker} busy={busy} />}
     />
+  );
+}
+
+/** Questions to the agent about the reply: the thread so far and a row to ask another. Asking never rewrites it. */
+function ReplyQuestions({ item }: { item: FeedbackItem }) {
+  const post = usePost();
+  const key = `reply-ask-${item.id}`;
+  const thread = item.replyThread ?? [];
+  return (
+    <div className={css.questions}>
+      {thread.length ? <ChatThread messages={thread} waiting="The agent is reading the reply…" /> : null}
+      <AskRow placeholder="Ask about this reply, e.g. why it says that" pendingKey={key} onSend={(text) => post({ type: "reply.ask", itemId: item.id, text }, key)} />
+    </div>
   );
 }
 

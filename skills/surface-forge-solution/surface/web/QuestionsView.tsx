@@ -13,7 +13,7 @@ import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Sub } from "../../../../web/kit/primitives/Sub.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
-import type { Decision, ForgeState, Question } from "../state.ts";
+import { specDimensionsOf, type Decision, type ForgeState, type Question } from "../state.ts";
 import { FollowUps } from "./FollowUps.tsx";
 import { ForgeBanner } from "./ForgeBanner.tsx";
 import { useForge, usePost } from "./hooks.ts";
@@ -186,7 +186,7 @@ export function QuestionsView() {
             <h3>
               Effect on the spec if you pick <span className={css.pick}>{selected.label}</span>
             </h3>
-            <DeltaBars dimensions={state.specDimensions} deltas={selected.specDelta ?? {}} />
+            <DeltaBars dimensions={specDimensionsOf(state)} deltas={selected.specDelta ?? {}} />
             <ImpactList items={selected.impact} />
           </Panel>
           <FollowUps question={q} selectedId={selectedId} />

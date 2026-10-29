@@ -3,13 +3,13 @@ import { test } from "node:test";
 import { parseAction, resolveAction } from "../actions.ts";
 import { applyPatch } from "../../../../src/host/patch.ts";
 import { SurfaceError } from "../../../../src/host/workflow.ts";
-import { emptyState, postDraft, postRound, type QuestionInput } from "../state.ts";
-import { cacheIsolation } from "./fixtures.ts";
+import { postDraft, postRound, type QuestionInput } from "../state.ts";
+import { cacheIsolation, declaredState } from "./fixtures.ts";
 
 const NOW = "2026-10-21T12:00:00.000Z";
 
 function seeded(...round: QuestionInput[]) {
-  const state = emptyState();
+  const state = declaredState();
   applyPatch(state, postRound(state, round.length ? round : [cacheIsolation()]));
   return state;
 }

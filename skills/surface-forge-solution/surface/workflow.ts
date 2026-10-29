@@ -15,7 +15,11 @@ const OptionFields = {
   visuals: Type.Record(Type.String(), LensVisual, { description: "One entry per lens id." }),
   scores: Type.Record(Type.String(), Score, { description: "One entry per dimension id; 1-5, relative to the other options, 5 = best." }),
   impact: Type.Optional(Type.Array(Impact, { description: "How the spec changes, one plain line each: sections added or changed, questions unlocked, new obligations. The Overview tab lists these for decided questions." })),
-  specDelta: Type.Optional(Type.Record(Type.String(), Type.Integer({ minimum: -3, maximum: 3 }), { description: "Change to spec-level dimensions: size, runtime, ops, platform, security. The Overview tab sums these for decided questions." })),
+  specDelta: Type.Optional(
+    Type.Record(Type.String(), Type.Integer({ minimum: -3, maximum: 3 }), {
+      description: "How far this option moves the spec along each of the session's spec dimensions, keyed by dimension id; omit a dimension it leaves alone. The Overview tab sums these for decided questions.",
+    }),
+  ),
 };
 const Question = Type.Object({
   id: Type.String({ description: "Stable decision id, e.g. D7. Reuse it to re-ask a reopened decision." }),
@@ -29,6 +33,13 @@ const Question = Type.Object({
   options: Type.Array(Type.Object({ id: Type.String(), label: Type.String(), recommended: Type.Optional(Type.Boolean()), ...OptionFields })),
 });
 
+const SpecDimension = Type.Object({
+  id: Type.String({ description: "Short stable id, e.g. downtime." }),
+  label: Type.String({ description: "What the axis measures, as the chart shows it, e.g. 'Migration downtime'." }),
+  hint: Type.Optional(Type.String()),
+  direction: Type.Optional(Type.Union([Type.Literal("cost"), Type.Literal("benefit")], { description: "cost (default): a positive delta adds work or risk. benefit: a positive delta is a gain." })),
+});
+
 const ask = defineSurfaceTool({
   name: "surface_forge_ask",
   label: "Forge ask",
@@ -38,9 +49,17 @@ const ask = defineSurfaceTool({
     "Answers and defers come back together as one 'Surface · forge · round N complete' message once every question in the round is settled; follow-ups and revisits arrive as they happen. " +
     "Every option must supply pros and cons, every lens (kind 'na' with a reason if it has nothing to show), and a score with a reason for every dimension.",
   promptSnippet: "surface_forge_ask: post a round of design decisions with visuals and trade-offs to the forge page",
-  parameters: Type.Object({ questions: Type.Array(Question, { minItems: 1, description: "Every question of the frontier round." }) }),
+  parameters: Type.Object({
+    questions: Type.Array(Question, { minItems: 1, description: "Every question of the frontier round." }),
+    specDimensions: Type.Optional(
+      Type.Array(SpecDimension, {
+        description:
+          "Spec dimensions to add to this session, or to update by id: the axes this particular solution's spec moves along. Declare them in the first round and add more in any later round; every specDelta key must name one.",
+      }),
+    ),
+  }),
   async run(session: ForgeSession, params) {
-    const url = await session.askRound(params.questions);
+    const url = await session.askRound(params.questions, params.specDimensions);
     const ids = params.questions.map((q) => q.id);
     return {
       text: `Posted round ${session.state.round} (${ids.join(", ")}) to the forge page: ${url}\nDo not wait or poll; the answers arrive together as one message.`,

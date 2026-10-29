@@ -15,7 +15,7 @@ import { spawnRunner } from "../src/host/runner.ts";
 import { Surface } from "../src/host/surface.ts";
 import type { AnyWorkflow, SurfaceAction } from "../src/host/workflow.ts";
 import type { ForgeAction } from "../skills/surface-forge-solution/surface/actions.ts";
-import { cacheIsolation } from "../skills/surface-forge-solution/surface/test/fixtures.ts";
+import { cacheIsolation, SPEC_DIMENSIONS } from "../skills/surface-forge-solution/surface/test/fixtures.ts";
 import forgeWorkflow from "../skills/surface-forge-solution/surface/workflow.ts";
 import type { PageAction as ReviewAction } from "../skills/surface-code-review/surface/actions.ts";
 import * as reviewFixtures from "../skills/surface-code-review/surface/test/fixtures.ts";
@@ -211,7 +211,7 @@ async function startForge(): Promise<string> {
   Object.assign(designQuestion, { id: "D3", header: "Design shape", title: "Where should named workflow selections act in the secret-loading flow?", prerequisites: ["D1", "D2"] });
   designQuestion.options[0].label = "Filter merged values";
   designQuestion.options[1].label = "Select within each provider";
-  const url = await forge.askRound([designQuestion]);
+  const url = await forge.askRound([designQuestion], SPEC_DIMENSIONS);
   await forge.handleAction({ type: "answer", questionId: "D3", optionId: "isolate" });
   await forge.askRound([cacheIsolation()]);
   forge.reply("D7", "No. 'Cache' is the storage backend for remote values; a .env file would be a source.", "isolate");

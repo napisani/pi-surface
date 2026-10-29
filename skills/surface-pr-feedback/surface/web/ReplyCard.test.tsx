@@ -57,3 +57,13 @@ test("Copy copies the body as GitHub will post it", async () => {
   assert.deepEqual(copied, [postedBody(item, "Fixed.")]);
   assert.notEqual(copied[0], "Fixed.");
 });
+
+test("a question about the reply posts reply.ask and its thread shows on the card", async () => {
+  const asked: FeedbackItem = { ...item, replyThread: [{ role: "user", text: "Why name the commit?", at: "t" }] };
+  const { posts } = renderSurface(<ReplyCard item={asked} />, { ...state, items: [asked] });
+  assert.ok(screen.getByText("Why name the commit?"));
+  assert.ok(screen.getByText(/The agent is reading the reply/));
+  fireEvent.change(screen.getByPlaceholderText(/Ask about this reply/), { target: { value: "Is it too long?" } });
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Ask" })));
+  assert.deepEqual(posts.at(-1), { action: { type: "reply.ask", itemId: "PF-1", text: "Is it too long?" }, key: "reply-ask-PF-1" });
+});

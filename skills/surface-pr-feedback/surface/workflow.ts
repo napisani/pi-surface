@@ -107,14 +107,16 @@ const status = defineSurfaceTool({
 const answer = defineSurfaceTool({
   name: "surface_feedback_answer",
   label: "Feedback answer",
-  description: "Answer the user's question about a feedback item in its discussion on the page, optionally adding visuals.",
+  description:
+    "Answer the user's question about a feedback item in its discussion on the page, optionally adding visuals. For a question about the item's reply, set about to \"reply\": the answer goes in the reply's thread, text only, and the reply is left as it is.",
   parameters: Type.Object({
     itemId: Type.String({ description: "e.g. PF-3" }),
     text: Type.String({ description: "Two to five sentences. Markdown." }),
     visuals: Type.Optional(Type.Array(LabeledVisual)),
+    about: Type.Optional(Type.Union([Type.Literal("item"), Type.Literal("reply")], { description: "What the question was about; the message says. Defaults to item." })),
   }),
   run(session: FeedbackSession, params) {
-    session.answer(params.itemId, params.text, params.visuals);
+    session.answer(params.itemId, params.text, params.visuals, params.about);
     return { text: `Answered on ${params.itemId}. End your turn.`, details: { itemId: params.itemId }, terminate: true };
   },
 });

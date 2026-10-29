@@ -1,7 +1,7 @@
 import type { PatchOp } from "../../../src/host/patch.ts";
 import { add, append, at, child, replace } from "../../../src/host/ptr.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
-import type { Dimension, Lens, Option } from "../../../src/kit/options.ts";
+import type { Dimension, Lens, Option, SpecDimension } from "../../../src/kit/options.ts";
 import type { ThreadMessage as KitMessage } from "../../../src/kit/thread.ts";
 
 export interface ThreadMessage extends KitMessage {
@@ -68,22 +68,64 @@ export interface ForgeState {
   round: number;
   /** Whether the user wants an RFC written alongside the tech spec. */
   rfcRequested: boolean;
-  specDimensions: Dimension[];
+  /** The axes the Overview sums decided options' specDelta along, declared by the agent as rounds go. */
+  specDimensions: SpecDimension[];
   questions: Question[];
   decisions: Decision[];
   drafts: Partial<Record<DraftKind, Draft>>;
 }
 
-export const DEFAULT_SPEC_DIMENSIONS: Dimension[] = [
+// Sessions saved before each session declared its own spec dimensions used these ids undeclared.
+const LEGACY_SPEC_DIMENSIONS: SpecDimension[] = [
   { id: "size", label: "Implementation size" },
   { id: "runtime", label: "Runtime cost" },
   { id: "ops", label: "Operational complexity" },
   { id: "platform", label: "Platform obligations" },
-  { id: "security", label: "Secret exposure reduced" },
+  { id: "security", label: "Secret exposure reduced", direction: "benefit" },
 ];
 
 export function emptyState(title = "forge session"): ForgeState {
-  return { version: 1, title, round: 0, rfcRequested: false, specDimensions: DEFAULT_SPEC_DIMENSIONS, questions: [], decisions: [], drafts: {} };
+  return { version: 1, title, round: 0, rfcRequested: false, specDimensions: [], questions: [], decisions: [], drafts: {} };
+}
+
+/** The declared spec dimensions, plus any id an option's specDelta uses without declaring it (older sessions). */
+export function specDimensionsOf(state: ForgeState): SpecDimension[] {
+  const declared = new Set(state.specDimensions.map((d) => d.id));
+  const used = new Set(state.questions.flatMap((q) => q.options.flatMap((o) => Object.keys(o.specDelta ?? {}))));
+  const undeclared = [...used].filter((id) => !declared.has(id)).map((id) => LEGACY_SPEC_DIMENSIONS.find((d) => d.id === id) ?? { id, label: id });
+  return [...state.specDimensions, ...undeclared];
+}
+
+/** The session's spec dimensions with a round's declarations merged in: a known id is updated in place, a new one appended. */
+function mergeSpecDimensions(current: SpecDimension[], declared: SpecDimension[]): SpecDimension[] {
+  const merged = current.map((d) => structuredClone(declared.find((x) => x.id === d.id) ?? d));
+  return [...merged, ...declared.filter((d) => !current.some((c) => c.id === d.id)).map((d) => structuredClone(d))];
+}
+
+function specDimensionErrors(declared: SpecDimension[]): string[] {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  for (const d of declared) {
+    if (!d.id.trim()) {
+      errors.push("a spec dimension needs an id");
+    } else if (seen.has(d.id)) {
+      errors.push(`spec dimension "${d.id}" is declared twice`);
+    }
+    seen.add(d.id);
+    if (!d.label.trim()) {
+      errors.push(`spec dimension "${d.id}" needs a label`);
+    }
+  }
+  return errors;
+}
+
+/** Every specDelta key must name a spec dimension, so the Overview sums only axes the session declared. */
+function specDeltaErrors(options: readonly Option[], dimensions: readonly SpecDimension[]): string[] {
+  return options.flatMap((o) =>
+    Object.keys(o.specDelta ?? {})
+      .filter((key) => !dimensions.some((d) => d.id === key))
+      .map((key) => `option "${o.id}" specDelta "${key}" names no spec dimension; declare it in specDimensions`),
+  );
 }
 
 const s = at<ForgeState>();
@@ -197,11 +239,12 @@ function questionIndex(state: ForgeState, questionId: string): number {
  * question's id replaces it in place; an answered question must be revisited
  * first. Throws listing every problem across the round.
  */
-export function postRound(state: ForgeState, inputs: QuestionInput[]): PatchOp[] {
+export function postRound(state: ForgeState, inputs: QuestionInput[], specDimensions: SpecDimension[] = []): PatchOp[] {
   if (inputs.length === 0) {
     throw new SurfaceError("a round needs at least one question");
   }
-  const errors: string[] = [];
+  const dimensions = mergeSpecDimensions(state.specDimensions, specDimensions);
+  const errors: string[] = specDimensionErrors(specDimensions);
   const ids = new Set<string>();
   for (const input of inputs) {
     if (ids.has(input.id)) {
@@ -211,7 +254,7 @@ export function postRound(state: ForgeState, inputs: QuestionInput[]): PatchOp[]
     if (state.questions.find((q) => q.id === input.id)?.status === "answered") {
       errors.push(`question "${input.id}" is already answered; it must be revisited first`);
     }
-    errors.push(...validateQuestion(input).map((e) => `${input.id}: ${e}`));
+    errors.push(...[...validateQuestion(input), ...specDeltaErrors(input.options, dimensions)].map((e) => `${input.id}: ${e}`));
   }
   if (errors.length) {
     throw new SurfaceError(`invalid round:\n- ${errors.join("\n- ")}`);
@@ -219,6 +262,9 @@ export function postRound(state: ForgeState, inputs: QuestionInput[]): PatchOp[]
 
   const round = state.round + 1;
   const ops = [replace(s("round"), round)];
+  if (specDimensions.length) {
+    ops.push(replace(s("specDimensions"), dimensions));
+  }
   for (const input of inputs) {
     const existing = state.questions.findIndex((q) => q.id === input.id);
     const thread = existing < 0 ? [] : state.questions[existing].thread;
@@ -304,7 +350,7 @@ export function reviseOption(state: ForgeState, questionId: string, optionId: st
     throw new SurfaceError(`question "${questionId}" has no option "${optionId}"`);
   }
   const revised: Option = { ...question.options[oi], ...structuredClone(revision) };
-  const errors = validateQuestion({ ...question, options: question.options.map((o, i) => (i === oi ? revised : o)) });
+  const errors = [...validateQuestion({ ...question, options: question.options.map((o, i) => (i === oi ? revised : o)) }), ...specDeltaErrors([revised], specDimensionsOf(state))];
   if (errors.length) {
     throw new SurfaceError(`invalid revision:\n- ${errors.join("\n- ")}`);
   }

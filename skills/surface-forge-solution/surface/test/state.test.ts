@@ -10,11 +10,12 @@ import {
   reopenDecision,
   requestDraft,
   reviseOption,
+  specDimensionsOf,
   validateQuestion,
   type ForgeState,
 } from "../state.ts";
 import { SurfaceError } from "../../../../src/host/workflow.ts";
-import { cacheIsolation } from "./fixtures.ts";
+import { cacheIsolation, declaredState, SPEC_DIMENSIONS } from "./fixtures.ts";
 
 const NOW = "2026-10-21T12:00:00.000Z";
 const run = (state: ForgeState, ops: ReturnType<typeof postRound>) => applyPatch(state, ops);
@@ -64,7 +65,7 @@ test("rejects out-of-range scores, duplicate ids and two recommendations", () =>
 });
 
 test("posting a question advances the round and opens it", () => {
-  const state = emptyState();
+  const state = declaredState();
   run(state, postRound(state, [cacheIsolation()]));
   assert.equal(state.round, 1);
   assert.equal(state.questions[0].status, "open");
@@ -72,7 +73,7 @@ test("posting a question advances the round and opens it", () => {
 });
 
 test("answering records whether the user overrode the recommendation", () => {
-  const state = emptyState();
+  const state = declaredState();
   run(state, postRound(state, [cacheIsolation()]));
   run(state, recordAnswer(state, "D7", "defer", "ship profiles first", NOW));
   assert.equal(state.questions[0].status, "answered");
@@ -84,7 +85,7 @@ test("answering records whether the user overrode the recommendation", () => {
 });
 
 test("an answered question cannot be re-posted until it is revisited", () => {
-  const state = emptyState();
+  const state = declaredState();
   run(state, postRound(state, [cacheIsolation()]));
   run(state, recordAnswer(state, "D7", "isolate", undefined, NOW));
   assert.throws(() => postRound(state, [cacheIsolation()]), /revisited first/);
@@ -104,7 +105,7 @@ test("an answered question cannot be re-posted until it is revisited", () => {
 });
 
 test("a round posts every question under one round number", () => {
-  const state = emptyState();
+  const state = declaredState();
   const second = { ...cacheIsolation(), id: "D8", header: "Next" };
   run(state, postRound(state, [cacheIsolation(), second]));
   assert.deepEqual(state.questions.map((q) => [q.id, q.round]), [["D7", 1], ["D8", 1]]);
@@ -112,7 +113,7 @@ test("a round posts every question under one round number", () => {
 });
 
 test("a round is rejected as a whole, naming each bad question", () => {
-  const state = emptyState();
+  const state = declaredState();
   const bad = { ...cacheIsolation(), id: "D8" };
   bad.options = bad.options.slice(0, 1);
   assert.throws(() => postRound(state, [cacheIsolation(), cacheIsolation()]), /"D7" appears twice/);
@@ -121,7 +122,7 @@ test("a round is rejected as a whole, naming each bad question", () => {
 });
 
 test("deferring closes the question with a deferred decision", () => {
-  const state = emptyState();
+  const state = declaredState();
   run(state, postRound(state, [cacheIsolation()]));
   run(state, deferQuestion(state, "D7", NOW));
   assert.equal(state.questions[0].status, "deferred");
@@ -129,7 +130,7 @@ test("deferring closes the question with a deferred decision", () => {
 });
 
 test("revising an option keeps the question valid", () => {
-  const state = emptyState();
+  const state = declaredState();
   run(state, postRound(state, [cacheIsolation()]));
   run(state, reviseOption(state, "D7", "defer", { scores: { correct: { value: 2, why: "only one config in practice" }, change: { value: 5, why: "" }, migrate: { value: 5, why: "" } } }));
   assert.equal(state.questions[0].options[1].scores.correct.value, 2);
@@ -140,7 +141,7 @@ test("revising an option keeps the question valid", () => {
 });
 
 test("a draft keeps its old markdown while rewriting and records the decisions it reflects", () => {
-  const state = emptyState();
+  const state = declaredState();
   run(state, postRound(state, [cacheIsolation()]));
   run(state, recordAnswer(state, "D7", "isolate", undefined, NOW));
   run(state, postDraft(state, "spec", "# Spec\nTBD(D8): cache backend", NOW));
@@ -153,4 +154,38 @@ test("a draft keeps its old markdown while rewriting and records the decisions i
   run(state, postDraft(state, "spec", "# Spec v2", NOW));
   assert.deepEqual(state.drafts.spec?.basis, {}, "a reopened decision is not part of the basis");
   assert.throws(() => postDraft(state, "rfc", "  ", NOW), SurfaceError);
+});
+
+test("spec dimensions belong to the session: declared with a round, grown later, and required by every specDelta", () => {
+  const state = emptyState();
+  assert.equal(state.specDimensions.length, 0);
+  assert.throws(() => postRound(state, [cacheIsolation()]), /option "isolate" specDelta "size" names no spec dimension; declare it in specDimensions/);
+  run(state, postRound(state, [cacheIsolation()], SPEC_DIMENSIONS));
+  assert.deepEqual(state.specDimensions, SPEC_DIMENSIONS);
+
+  const second = { ...cacheIsolation(), id: "D8", header: "Rollout" };
+  second.options[0].specDelta = { downtime: 2 };
+  run(state, postRound(state, [second], [{ id: "downtime", label: "Migration downtime" }, { id: "size", label: "Lines changed" }]));
+  assert.deepEqual(
+    state.specDimensions.map((d) => [d.id, d.label]),
+    [
+      ["size", "Lines changed"],
+      ["security", "Secret exposure reduced"],
+      ["downtime", "Migration downtime"],
+    ],
+  );
+  assert.throws(() => reviseOption(state, "D8", "isolate", { specDelta: { latency: 1 } }), /specDelta "latency" names no spec dimension/);
+  assert.throws(() => postRound(state, [{ ...cacheIsolation(), id: "D9" }], [{ id: "x", label: " " }]), /spec dimension "x" needs a label/);
+});
+
+test("sessions saved before dimensions were declared still label the ones their options used", () => {
+  const state = emptyState();
+  const legacy = cacheIsolation();
+  legacy.options[1].specDelta = { mystery: 1 };
+  state.questions.push({ ...legacy, round: 1, status: "open", thread: [] });
+  assert.deepEqual(specDimensionsOf(state), [
+    { id: "size", label: "Implementation size" },
+    { id: "security", label: "Secret exposure reduced", direction: "benefit" },
+    { id: "mystery", label: "mystery" },
+  ]);
 });

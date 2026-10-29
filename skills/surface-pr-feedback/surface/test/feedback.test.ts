@@ -253,3 +253,31 @@ test("feedback from chat works without a PR and is copied, never posted", async 
     await close();
   }
 });
+
+test("the user can ask about a reply, and the agent answers in the reply's own thread", async () => {
+  const { feedback, messages, close, replay } = harness();
+  try {
+    await open(feedback);
+    await assert.rejects(feedback.handleAction({ type: "reply.ask", itemId: "PF-1", text: "Why?" }), /PF-1 has no reply to ask about/);
+    feedback.draftReply("PF-1", "Fixed in the next commit.");
+    await feedback.handleAction({ type: "reply.ask", itemId: "PF-1", text: "Should this name the file?" });
+    const content = messages.at(-1)?.content ?? "";
+    assert.match(content, /^question about PF-1's reply/);
+    assert.match(content, /> Fixed in the next commit\./);
+    assert.match(content, /surface_feedback_answer \(itemId "PF-1", about "reply"\)/);
+    feedback.answer("PF-1", "Yes: name src/auth.ts.", [], "reply");
+    const item = feedback.state.items.find((i) => i.id === "PF-1");
+    assert.deepEqual(
+      item?.replyThread?.map((m) => [m.role, m.text]),
+      [
+        ["user", "Should this name the file?"],
+        ["agent", "Yes: name src/auth.ts."],
+      ],
+    );
+    assert.equal(item?.discussion.length, 0, "the item's own discussion stays separate");
+    assert.equal(item?.reply?.body, "Fixed in the next commit.", "asking never changes the reply");
+    assert.deepEqual(replay(), feedback.state);
+  } finally {
+    await close();
+  }
+});

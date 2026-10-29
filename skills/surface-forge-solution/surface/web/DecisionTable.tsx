@@ -2,7 +2,7 @@ import { DeltaBadge } from "./DeltaBadge.tsx";
 import { ImpactList } from "../../../../web/kit/ImpactList.tsx";
 import { Badge } from "../../../../web/kit/primitives/Badge.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
-import type { Decision, ForgeState } from "../state.ts";
+import { specDimensionsOf, type Decision, type ForgeState } from "../state.ts";
 import css from "./DecisionTable.module.css";
 import { usePost } from "./hooks.ts";
 import { openQuestion } from "./nav.ts";
@@ -22,7 +22,7 @@ function Row({ state, d }: { state: ForgeState; d: Decision }) {
   const q = state.questions.find((x) => x.id === d.id);
   const o = d.status === "decided" ? q?.options.find((x) => x.id === d.optionId) : undefined;
   const badge = <DecisionBadge decision={d} />;
-  const chips = state.specDimensions.filter((dim) => o?.specDelta?.[dim.id]);
+  const chips = specDimensionsOf(state).filter((dim) => o?.specDelta?.[dim.id]);
   return (
     <tr>
       <td>

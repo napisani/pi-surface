@@ -13,6 +13,12 @@ export interface Dimension {
   hint?: string;
 }
 
+/** An axis the whole spec moves along; each session names its own from the problem it solves. */
+export interface SpecDimension extends Dimension {
+  /** cost (the default): a positive delta adds work or risk. benefit: a positive delta is a gain. */
+  direction?: "cost" | "benefit";
+}
+
 export interface Score {
   value: number;
   why: string;

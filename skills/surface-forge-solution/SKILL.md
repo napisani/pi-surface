@@ -39,7 +39,7 @@ Every design question goes to the page. Never ask a design question in plain tex
    - a call tree or ASCII flow when it is about control flow, ownership, or where a seam goes;
    - a file tree when it is about module boundaries;
    - a data table when it is about the shape of data or a side-by-side comparison.
-5. **Spec impact.** Say what the option does to the spec, and to the RFC when one is requested: sections it adds or changes, decisions it unlocks, and any new subsystem or platform obligation.
+5. **Spec impact.** Say what the option does to the spec, and to the RFC when one is requested: sections it adds or changes, decisions it unlocks, and any new subsystem or platform obligation. Score that impact along the session's [spec dimensions](#spec-dimensions).
 6. **Plain language.** The user reads every word of a question once, cold. Write questions, option descriptions, pros, cons, score reasons, impact lines, and `look` lines with short sentences and concrete words. Cut filler and inflated claims, then check them against these rules:
    - An option description is one or two whole sentences, at most 280 characters: what changes, and what it costs. No flag names, file names, or internal terms the user has not seen in this session unless the sentence defines them. Each pro or con is at most 100 characters; the page rejects longer ones.
    - Name the concrete thing, not the idea: "copies every exported parent variable into the child" beats "inherits the ambient environment by default".
@@ -57,11 +57,19 @@ Post each round with one `surface_forge_ask` call carrying all of its questions.
 - Choose 2–4 lenses from the views above and fill every lens for every option, or use kind `na` with the reason.
 - Turn the trade-off dimensions into `dimensions`, and score every option 1–5 against the others with a one-line reason.
 - Put the bullets in `pros` and `cons`, one string per bullet.
-- Put spec impact in `impact` and `specDelta` on every option. The page's Overview tab adds these up across the decided questions, so an option without them counts as no change.
+- Put spec impact in `impact` and `specDelta` on every option, keyed by [spec dimension](#spec-dimensions) id. The page's Overview tab adds these up across the decided questions, so an option without them counts as no change.
 - Flag the recommendation with `recommended: true`, keeping the label to the option's name.
 - The turn ends after `surface_forge_ask`. Answers and defers come back together as one `Surface · forge · round N complete` message once every question in the round is settled; that message is the round's answer. Follow-ups and revisits arrive as they happen.
 - A `Surface · forge · revisit` message reopens a decision: re-ask it with `surface_forge_ask` under the same id and name the later decisions it puts back up for review.
 - Decisions are recorded on the page. If the user decides in chat, ask them to submit it on the page so the Overview stays complete.
+
+### Spec dimensions
+
+The Overview's net-effect chart sums every decided option's `specDelta` along the session's **spec dimensions**: the axes this particular solution's spec moves along. Each session derives its own from the problem being forged; they are a set you build, not a menu you pick from.
+
+- **First round:** declare 3–6 with `specDimensions` on `surface_forge_ask`, each an axis a reviewer of *this* spec would weigh. Implementation size, runtime cost, operational complexity, platform obligations and secret exposure fit one past session; a cache design might weigh staleness and memory, a data migration downtime and rollback cost, a public API compatibility and surface area.
+- **Every later round:** when a question stretches the design into an axis the set misses, declare the new dimension in that round's `surface_forge_ask`. Options from earlier rounds count as zero on it. Re-declaring an id renames or re-describes it.
+- **Direction:** mark a dimension `benefit` when a positive delta is a gain (coverage, isolation, secrets removed); the default `cost` reads a positive delta as more work or risk. The chart colors gains green either way.
 
 ### Interim drafts
 

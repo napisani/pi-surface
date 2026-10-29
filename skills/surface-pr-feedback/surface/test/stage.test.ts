@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { FeedbackItem } from "../state.ts";
-import { listGroups, stageOf, stepFrom } from "../web/stage.ts";
+import { listGroups, stageOf, stepFrom, type ListFilter } from "../web/stage.ts";
 
 const item = (id: string, over: Partial<FeedbackItem> = {}): FeedbackItem => ({
   id,
@@ -28,7 +28,7 @@ test("stageOf covers every stage", () => {
 
 test("listGroups orders by stage and hides what the filter hides", () => {
   const items = [item("done", { closed: true }), item("hidden", { hidden: true }), item("open"), item("replying", { decision: "respond" })];
-  const groups = listGroups(items, { showHidden: false, showDone: false });
+  const groups = listGroups(items, { showHidden: false, showDone: false, decision: "all" });
   assert.deepEqual(
     groups.map((g) => [g.stage, g.items.map((i) => i.id)]),
     [
@@ -44,4 +44,13 @@ test("stepFrom moves within the list and starts at the top", () => {
   assert.equal(stepFrom(order, "a", 1), "b");
   assert.equal(stepFrom(order, "c", 1), "c");
   assert.equal(stepFrom(order, "a", -1), "a");
+});
+
+test("listGroups can keep only one decision", () => {
+  const items = [item("open"), item("fixing", { decision: "fix" }), item("replying", { decision: "respond" }), item("skipped", { decision: "skip" })];
+  const ids = (decision: ListFilter["decision"]) => listGroups(items, { showHidden: true, showDone: true, decision }).flatMap((g) => g.items.map((i) => i.id));
+  assert.deepEqual(ids("all"), ["open", "fixing", "replying", "skipped"]);
+  assert.deepEqual(ids("skip"), ["skipped"]);
+  assert.deepEqual(ids("respond"), ["replying"]);
+  assert.deepEqual(ids("undecided"), ["open"]);
 });

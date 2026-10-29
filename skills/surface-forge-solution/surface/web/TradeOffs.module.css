@@ -4,3 +4,4 @@
 .dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
 .note{text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400}
 .faint{color:var(--faint)}
+.direction{margin:-4px 0 10px;font-size:12px;color:var(--dim)}

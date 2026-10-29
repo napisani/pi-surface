@@ -4,6 +4,7 @@ import { applyPatch, type PatchOp } from "../../../src/host/patch.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
 import {
   addDiscussion,
+  addReplyMessage,
   commitFor,
   decide,
   deleteCommit,
@@ -51,6 +52,7 @@ const ACTIONS = {
   "reply.edit": action("reply.edit", { itemId: Id, body: Text }),
   "reply.delete": action("reply.delete", { itemId: Id }),
   "reply.assist": action("reply.assist", { itemId: Id, instruction: Text }),
+  "reply.ask": action("reply.ask", { itemId: Id, text: Text }),
   "reply.stopAssist": action("reply.stopAssist", { itemId: Id }),
   "replies.autoDraft": action("replies.autoDraft", { itemIds: Ids(1), instruction: OptionalText }),
   "reply.post": action("reply.post", { itemId: Id, resolve: Type.Optional(Type.Boolean()) }),
@@ -229,6 +231,22 @@ function assistMessage(state: FeedbackState, item: FeedbackItem, instruction: st
   ].join("\n");
 }
 
+function replyQuestionMessage(state: FeedbackState, item: FeedbackItem): string {
+  const thread = item.replyThread ?? [];
+  const earlier = thread.slice(0, -1).map((m) => `${m.role === "user" ? "user" : "you"}: ${m.text}`);
+  return [
+    `question about ${item.id}'s reply`,
+    `Feedback: ${feedbackLine(state)}`,
+    ...replyContext(state, item),
+    `Reply (${item.reply?.status ?? "draft"}):`,
+    indent(item.reply?.body.trim() || "(empty)", "> "),
+    ...(earlier.length ? ["Questions so far:", ...earlier] : []),
+    `Question: ${thread.at(-1)?.text ?? ""}`,
+    "",
+    `Answer with surface_feedback_answer (itemId "${item.id}", about "reply"). Answer only: do not rewrite the reply, which the user revises separately.`,
+  ].join("\n");
+}
+
 function autoDraftMessage(state: FeedbackState, items: FeedbackItem[], instruction: string | undefined): string {
   return [
     `draft replies for ${items.length} item${items.length === 1 ? "" : "s"}`,
@@ -308,6 +326,11 @@ function resolveReply(state: FeedbackState, action: ActionOf<`repl${string}` | "
     case "reply.assist": {
       const ops = setAssisting(state, action.itemId, true, now);
       return { ops, message: { content: assistMessage(state, itemOf(state, action.itemId), action.instruction), details: action } };
+    }
+    case "reply.ask": {
+      const ops = addReplyMessage(state, action.itemId, { role: "user", text: action.text, at: now });
+      const after = applyPatch(structuredClone(state), ops);
+      return { ops, message: { content: replyQuestionMessage(after, itemOf(after, action.itemId)), details: action } };
     }
     case "reply.stopAssist":
       return { ops: setAssisting(state, action.itemId, false, now) };

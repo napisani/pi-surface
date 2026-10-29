@@ -5,7 +5,7 @@ import { fakePi } from "../../../../test/harness.ts";
 import { openStream, postAction } from "../../../../test/sse.ts";
 import type { ForgeState } from "../state.ts";
 import forgeWorkflow from "../workflow.ts";
-import { cacheIsolation } from "./fixtures.ts";
+import { cacheIsolation, SPEC_DIMENSIONS } from "./fixtures.ts";
 
 process.env.SURFACE_NO_OPEN = "1";
 
@@ -14,7 +14,7 @@ test("browser actions reach the agent as turn-starting messages, and state survi
   registerSurface(host.pi, [forgeWorkflow]);
   await host.emit("session_start");
 
-  const result = await host.tools.get("surface_forge_ask")!.execute("call-1", { questions: [cacheIsolation()] });
+  const result = await host.tools.get("surface_forge_ask")!.execute("call-1", { questions: [cacheIsolation()], specDimensions: SPEC_DIMENSIONS });
   assert.equal(result.terminate, true, "posting a question should end the agent's turn");
   const url: string = result.details.url;
   assert.match(url, /^http:\/\/127\.0\.0\.1:\d+\/[\w-]+\/forge\/$/);
@@ -78,7 +78,7 @@ test("an RFC requested in chat reaches the page without waking the agent", async
   const host = fakePi();
   registerSurface(host.pi, [forgeWorkflow]);
   await host.emit("session_start");
-  const { details } = await host.tools.get("surface_forge_ask")!.execute("call-1", { questions: [cacheIsolation()] });
+  const { details } = await host.tools.get("surface_forge_ask")!.execute("call-1", { questions: [cacheIsolation()], specDimensions: SPEC_DIMENSIONS });
   await host.tools.get("surface_forge_rfc")!.execute("call-2", { requested: true });
   await host.tools.get("surface_forge_rfc")!.execute("call-3", { requested: true });
   const stream = await openStream<ForgeState>(new URL("events", details.url).href);
@@ -113,7 +113,7 @@ test("a draft posted by the agent reaches the page and survives resume", async (
   const host = fakePi();
   registerSurface(host.pi, [forgeWorkflow]);
   await host.emit("session_start");
-  await host.tools.get("surface_forge_ask")!.execute("call-1", { questions: [cacheIsolation()] });
+  await host.tools.get("surface_forge_ask")!.execute("call-1", { questions: [cacheIsolation()], specDimensions: SPEC_DIMENSIONS });
   const result = await host.tools.get("surface_forge_draft")!.execute("call-2", { kind: "spec", markdown: "# Spec\n\nTBD(D7): cache scope. TBD: retries." });
   assert.equal(result.details.tbds, 2);
   await host.emit("session_shutdown");

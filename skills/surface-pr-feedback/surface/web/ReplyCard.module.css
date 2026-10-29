@@ -1,3 +1,4 @@
 .postsAs{margin-top:6px;font-size:12px}
 .postsAs pre{white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:var(--well);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
 .sha{font-family:var(--mono)}
+.questions{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}

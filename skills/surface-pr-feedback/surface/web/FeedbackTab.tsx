@@ -16,7 +16,7 @@ const selectItems = (s: FeedbackState) => s.items;
 
 export function FeedbackTab() {
   const items = useFeedback(selectItems);
-  const [filter, setFilter] = useState<ListFilter>({ showHidden: false, showDone: true });
+  const [filter, setFilter] = useState<ListFilter>({ showHidden: false, showDone: true, decision: "all" });
   const [itemParam] = useHashState("item", "");
   const detail = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => listGroups(items, filter), [items, filter]);

@@ -4,6 +4,7 @@ import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { Checkbox } from "../../../../web/kit/primitives/Checkbox.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
+import { Segmented } from "../../../../web/kit/primitives/Segmented.tsx";
 import { Text } from "../../../../web/kit/primitives/Text.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { TaskBanner } from "../../../../web/kit/TaskBanner.tsx";
@@ -11,10 +12,19 @@ import type { FeedbackItem, FeedbackState } from "../state.ts";
 import { usePost, useFeedback } from "./hooks.ts";
 import css from "./ItemList.module.css";
 import { ItemRow } from "./ItemRow.tsx";
+import { DECISION_LABEL } from "./labels.ts";
 import { openItem } from "./nav.ts";
 import type { ListFilter, Stage } from "./stage.ts";
 
 const selectItems = (s: FeedbackState) => s.items;
+
+const DECISION_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "undecided", label: DECISION_LABEL.undecided },
+  { id: "fix", label: DECISION_LABEL.fix },
+  { id: "respond", label: DECISION_LABEL.respond },
+  { id: "skip", label: DECISION_LABEL.skip },
+] as const;
 const selectTriage = (s: FeedbackState) => s.triage;
 const selectGithub = (s: FeedbackState) => s.pr !== null;
 
@@ -88,6 +98,9 @@ export function ItemList({ groups, active, filter, onFilter }: ItemListProps) {
         <Text tone="faint" small>
           j / k to move
         </Text>
+      </div>
+      <div className={css.decisions}>
+        <Segmented options={DECISION_FILTERS} value={filter.decision} onChange={(decision) => onFilter({ ...filter, decision })} />
       </div>
       {items.length === 0 ? <EmptyState small>No feedback yet. {github ? "Refresh after reviewers comment." : "Paste feedback in chat and ask the agent to add it."}</EmptyState> : null}
       {groups.map((g) => (
