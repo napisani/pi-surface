@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import { defineSurfaceTool, defineWorkflow } from "../../../src/host/workflow.ts";
+import { FINDING_DIMENSIONS, FIX_SIZES, TRIAGE_BUCKETS } from "../../../src/kit/findings.ts";
 import { Anchor, codeRefSchema, LabeledVisual } from "../../../src/kit/schemas.ts";
 import { parseAction, type PageAction } from "./actions.ts";
 import { ReviewSession } from "./session.ts";
@@ -9,6 +10,27 @@ const CodeRef = codeRefSchema(
   "Repository-relative path. May be outside the PR's files, e.g. an affected caller.",
   "Why this code matters to the finding, one line.",
 );
+
+const Triage = Type.Object(
+  {
+    bucket: Type.Union(
+      TRIAGE_BUCKETS.map((b) => Type.Literal(b)),
+      { description: "fix-now: Trivial/Small fix inside the diff's files. fix-now-expands: worth doing here though it grows the diff. defer: real, file a follow-up. skip: not worth acting on. Critical and High are never defer or skip." },
+    ),
+    fixSize: Type.Union(
+      FIX_SIZES.map((s) => Type.Literal(s)),
+      { description: "Trivial: one line or expression. Small: a few lines, same file. Moderate: new logic or a helper in a file the diff touches. Large: outside the diff or a refactor." },
+    ),
+    touches: Type.Array(Type.String(), { minItems: 1, description: "Repository-relative files the fix edits; any outside the diff make it expand scope." }),
+    reason: Type.String({ description: "One sentence: severity, fix size, and why it landed in this bucket." }),
+  },
+  { description: "The mvr-suggestions verdict on this finding." },
+);
+
+const Score = Type.Object({ value: Type.Integer({ minimum: 1, maximum: 5 }), why: Type.String({ description: "One short line." }) });
+const Scores = Type.Object(Object.fromEntries(FINDING_DIMENSIONS.map((d) => [d.id, Type.Object(Score.properties, { description: d.hint })])), {
+  description: "1-5 per axis, 5 being the strongest case for fixing it in this diff: high impact, likely, certain, an easy, contained, safe and testable fix.",
+});
 
 const Finding = Type.Object({
   title: Type.String(),
@@ -23,6 +45,8 @@ const Finding = Type.Object({
   primary: CodeRef,
   related: Type.Optional(Type.Array(CodeRef, { description: "Other code the reader needs: callers, the guard that is missing, the schema." })),
   visuals: Type.Optional(Type.Array(LabeledVisual, { description: "1-3 views that make the issue obvious, chosen per finding." })),
+  triage: Triage,
+  scores: Scores,
 });
 
 const open = defineSurfaceTool({
@@ -78,7 +102,7 @@ const findings = defineSurfaceTool({
   label: "Review findings",
   description:
     "Publish a multi-valued review's verified, consolidated findings to the page, replacing earlier ones. Order findings Critical to Low as in the report; they are numbered F1.. in that order. " +
-    "Every finding needs a primary code ref; add related refs and 1-3 visuals that explain it.",
+    "Every finding needs a primary code ref, a triage verdict and a score on every axis; add related refs and 1-3 visuals that explain it.",
   parameters: Type.Object({
     summary: Type.Object({
       intent: Type.String({ description: "The change's intent paragraph, or 'not determined'." }),

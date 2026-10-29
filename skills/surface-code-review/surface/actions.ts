@@ -166,7 +166,7 @@ function prLine(state: ReviewState): string {
 
 function findingLine(f: Finding): string {
   const at = `${f.primary.path}:${f.primary.startLine}${f.primary.endLine > f.primary.startLine ? `-${f.primary.endLine}` : ""}`;
-  return `- ${f.id} [${f.severity}] ${f.title} · ${at} · ${f.category}`;
+  return `- ${f.id} [${f.severity}] ${f.title} · ${at} · ${f.category}${f.triage ? ` · triaged ${f.triage.bucket}` : ""}`;
 }
 
 function assistMessage(state: ReviewState, comment: DraftComment, instruction: string): string {
@@ -327,7 +327,7 @@ function requestFixes(state: ReviewState, findingIds: string[], now: string): Pa
 function resolveTask(state: ReviewState, action: ActionOf<"review.run" | "walkthrough.run">, now: string): Resolution {
   const review = action.type === "review.run";
   const ask = review
-    ? `Run the multi-valued-review skill over this diff (${diffCommand(state)} in the worktree), then publish with surface_review_findings. Give every finding its code refs and the visuals that explain it.`
+    ? `Run the multi-valued-review skill over this diff (${diffCommand(state)} in the worktree), then publish with surface_review_findings. Give every finding its code refs, the visuals that explain it, a triage verdict and a score on every axis, per references/findings.md.`
     : `Write a guided tour of these changes (${diffCommand(state)}) and publish it with surface_review_walkthrough.`;
   return {
     ops: startTask(state, review ? "review" : "walkthrough", action.focus, now),

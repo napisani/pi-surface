@@ -4,5 +4,11 @@
 .sumRow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .intent{font-size:13px;margin-top:6px;color:var(--dim)}
 .intent b{color:var(--ink)}
-.sevHead{color:var(--sev);margin:14px 0 6px}
+.groupHead{color:var(--sev);margin:14px 0 6px;display:flex;align-items:center;gap:8px}
+.groupPick{margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;color:var(--faint);font:inherit;font-size:11px;padding:0 7px;cursor:pointer;text-transform:none;letter-spacing:0}
+.groupPick:hover{color:var(--ink);border-color:var(--hover-line)}
+.fixNow{--sev:var(--amber-ink)}
+.fixNowExpands{--sev:var(--high)}
+.defer{--sev:var(--blue)}
+.skip{--sev:var(--faint)}
 .details{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin-bottom:12px}

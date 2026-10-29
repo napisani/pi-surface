@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Severity } from "../../../src/kit/findings.ts";
+import type { Severity, TriageBucket } from "../../../src/kit/findings.ts";
 import type { DraftStatus } from "../../../src/kit/github-draft.ts";
 import type { Level } from "../../../src/kit/levels.ts";
 import type { RoundStatus } from "../../../src/kit/rounds.ts";
@@ -12,6 +12,7 @@ const SEVERITY_TONE = { Critical: css.sevCritical, High: css.sevHigh, Medium: cs
 /** Risk-style levels: High is the alarming end. */
 export const LEVEL_TONE = { High: "err", Medium: "warn", Low: "teal" } satisfies Record<Level, Tone>;
 export const DRAFT_TONE = { draft: "amber", posting: "info", posted: "teal", failed: "err" } satisfies Record<DraftStatus, Tone>;
+export const BUCKET_TONE = { "fix-now": "amber", "fix-now-expands": "warn", defer: "info", skip: "muted" } satisfies Record<TriageBucket, Tone>;
 export const ROUND_TONE = { pending: "teal", sent: "info", done: "ok", declined: "muted", "needs-input": "warn" } satisfies Record<RoundStatus, Tone>;
 
 export interface BadgeProps {

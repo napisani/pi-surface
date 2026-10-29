@@ -109,6 +109,11 @@ export class Surface {
     return this.#touched.has(id);
   }
 
+  /** True while the server is up or starting. */
+  get serving(): boolean {
+    return this.#server !== undefined;
+  }
+
   /** The index page, or a workflow's page. Starts the server on first use. */
   async url(id?: WorkflowId): Promise<string> {
     if (id !== undefined) {

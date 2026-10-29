@@ -5,10 +5,12 @@ import { useCallback, useMemo } from "react";
 import type { LineItemRef } from "../../../../web/kit/diffItems.ts";
 import { FindingChip } from "../../../../web/kit/FindingChip.tsx";
 import { indexById } from "../../../../web/kit/indexById.ts";
+import { Badge, ROUND_TONE } from "../../../../web/kit/primitives/Badge.tsx";
 import { useValue } from "../../../../web/kit/valueStore.ts";
 import type { ReviewState } from "../state.ts";
 import { CommentCard } from "./CommentCard.tsx";
 import { ComposerCard } from "./ComposerCard.tsx";
+import { FIX_LABEL, fixRequest } from "./fixes.ts";
 import { useReview } from "./hooks.ts";
 import { threads } from "./lineItems.ts";
 import css from "./LineItem.module.css";
@@ -19,6 +21,7 @@ import { RequestCard } from "./RequestCard.tsx";
 import { composerStore } from "./ui.ts";
 
 const selectRemote = (s: ReviewState) => s.remote;
+const selectRequests = (s: ReviewState) => s.requests;
 
 function ThreadItem({ id }: { id: number }) {
   const remote = useReview(selectRemote);
@@ -39,7 +42,14 @@ function ComposerItem() {
 function FindingItem({ id }: { id: string }) {
   const nav = useNav();
   const finding = useReview(useCallback((s: ReviewState) => indexById(s.review.findings).get(id), [id]));
-  return finding ? <FindingChip finding={finding} onOpen={() => nav.openFinding(id)} /> : null;
+  const requests = useReview(selectRequests);
+  const fix = finding ? fixRequest(finding, requests) : undefined;
+  const status = fix ? (
+    <Badge mini tone={ROUND_TONE[fix.status]}>
+      {FIX_LABEL[fix.status]}
+    </Badge>
+  ) : undefined;
+  return finding ? <FindingChip finding={finding} status={status} onOpen={() => nav.openFinding(id)} /> : null;
 }
 
 function QuestionItem({ id }: { id: string }) {

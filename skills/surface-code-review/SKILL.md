@@ -51,7 +51,7 @@ Each request arrives as a message starting `Surface · review ·` with the revie
 | Request | What to do | Publish with |
 |---|---|---|
 | change requests, round N | Apply each request in the worktree, per [Change requests](#change-requests). | `surface_review_request_update`, once, covering every request |
-| run the multi-valued review | Review the named diff per [references/findings.md](references/findings.md), including any focus the user gave. Report progress with `surface_review_status` when review starts and when verification starts; on failure, report `failed` with the reason. | `surface_review_findings` |
+| run the multi-valued review | Review the named diff per [references/findings.md](references/findings.md), including any focus the user gave. Triage and score every finding there too. Report progress with `surface_review_status` when review starts and when verification starts; on failure, report `failed` with the reason. | `surface_review_findings` |
 | draft comments for N findings | One GitHub comment draft per finding, per [Comment drafts](#comment-drafts). | `surface_review_comment_draft` with `findingId` |
 | comment assist · Cn | Rewrite draft Cn as asked, keeping its anchor unless the request moves it. An empty draft means write it from scratch. | `surface_review_comment_draft` with `commentId` |
 | question about Fn | Answer from the code, not from memory of the review. Add a visual (same vocabulary as findings) when structure explains it better than prose. | `surface_review_finding_reply` |

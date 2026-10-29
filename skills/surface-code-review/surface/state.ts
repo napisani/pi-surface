@@ -2,7 +2,7 @@ import type { Created, PatchOp } from "../../../src/host/patch.ts";
 import { add, append, at, child, item, remove, replace } from "../../../src/host/ptr.ts";
 import { messageOf, SurfaceError } from "../../../src/host/workflow.ts";
 import { type Anchor, anchorOf, checkLines, checkPath, checkRef, checkSide, type CodeRef, type LabeledVisual, type Rev, type Side, validateVisual } from "../../../src/kit/code.ts";
-import { SEVERITIES, type DroppedFinding, type Finding, type FindingInput, type ReviewSummary } from "../../../src/kit/findings.ts";
+import { FINDING_DIMENSIONS, FIX_SIZES, SEVERITIES, TRIAGE_BUCKETS, outsideFiles, type DroppedFinding, type Finding, type FindingInput, type ReviewSummary, type Triage } from "../../../src/kit/findings.ts";
 import { availableRevs, type PrFile, type PrInfo, type Revisions } from "../../../src/kit/git.ts";
 import * as drafts from "../../../src/kit/github-draft.ts";
 import type { GitHubDraft, PostResult } from "../../../src/kit/github-draft.ts";
@@ -372,6 +372,71 @@ function validateFinding(state: ReviewState, input: FindingInput, what: string):
     }
   }
   (input.visuals ?? []).forEach((v, i) => errors.push(...validateVisual(v, `${what} visual[${i}]`, { label: true })));
+  errors.push(...validateTriage(state, input, what), ...validateScores(input, what));
+  return errors;
+}
+
+function incompleteTriage(t: Triage, what: string): string[] {
+  const errors: string[] = [];
+  if (!TRIAGE_BUCKETS.includes(t.bucket)) {
+    errors.push(`${what}: triage.bucket must be one of ${TRIAGE_BUCKETS.join(", ")}`);
+  }
+  if (!FIX_SIZES.includes(t.fixSize)) {
+    errors.push(`${what}: triage.fixSize must be one of ${FIX_SIZES.join(", ")}`);
+  }
+  if (!t.touches?.length) {
+    errors.push(`${what}: triage.touches needs the files the fix edits`);
+  }
+  if (!t.reason?.trim()) {
+    errors.push(`${what}: triage needs a reason`);
+  }
+  return errors;
+}
+
+/** Holds a triage to the mvr-suggestions rules, so a bucket always means the same thing on the page. */
+function validateTriage(state: ReviewState, input: FindingInput, what: string): string[] {
+  const t = input.triage;
+  if (!t) {
+    return [`${what}: needs a triage`];
+  }
+  const missing = incompleteTriage(t, what);
+  if (missing.length) {
+    return missing;
+  }
+  const errors: string[] = [];
+  const outside = outsideFiles(state.files, t.touches);
+  const cheap = t.fixSize === "Trivial" || t.fixSize === "Small";
+  if ((input.severity === "Critical" || input.severity === "High") && (t.bucket === "defer" || t.bucket === "skip")) {
+    errors.push(`${what}: ${input.severity} findings are always fixed in this diff; use fix-now or fix-now-expands`);
+  }
+  if (t.bucket === "fix-now" && (!cheap || outside.length)) {
+    errors.push(`${what}: fix-now needs a Trivial or Small fix inside the diff's files${outside.length ? ` (${outside.join(", ")} is outside)` : ""}; use fix-now-expands`);
+  }
+  if (t.bucket === "fix-now-expands" && cheap && !outside.length) {
+    errors.push(`${what}: a ${t.fixSize} fix inside the diff's files is fix-now, not fix-now-expands`);
+  }
+  return errors;
+}
+
+function validateScores(input: FindingInput, what: string): string[] {
+  if (!input.scores) {
+    return [`${what}: needs scores for ${FINDING_DIMENSIONS.map((d) => d.id).join(", ")}`];
+  }
+  const errors: string[] = [];
+  for (const d of FINDING_DIMENSIONS) {
+    const score = input.scores[d.id];
+    if (!score || !Number.isInteger(score.value) || score.value < 1 || score.value > 5) {
+      errors.push(`${what}: scores.${d.id} needs a whole value from 1 to 5`);
+    } else if (!score.why?.trim()) {
+      errors.push(`${what}: scores.${d.id} needs a why`);
+    }
+  }
+  const known = new Set(FINDING_DIMENSIONS.map((d) => d.id));
+  for (const id of Object.keys(input.scores)) {
+    if (!known.has(id)) {
+      errors.push(`${what}: unknown score "${id}"`);
+    }
+  }
   return errors;
 }
 

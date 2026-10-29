@@ -65,7 +65,10 @@ not run automatically based on your prompt.
 Browse split or unified diffs, filter the file tree, and select lines to ask a
 question or request a change. Send change requests in batches; the agent edits
 your checkout and reports the result on the page. You can also request a review
-with findings or a guided walkthrough.
+with findings or a guided walkthrough. Each finding comes triaged (fix now, fix
+now while expanding scope, defer, or skip) and scored on a radar covering the
+issue and its fix. Findings whose fix you requested show whether it is queued,
+in progress, or applied.
 
 For a GitHub PR, give the skill a PR URL or number. Your own PR can use a live
 checkout for edits. Reviews of someone else's PR use a worktree pinned to the
@@ -111,6 +114,30 @@ live GitHub PR.
 
 Use `/surface` to reopen the session's pages, or `/surface forge`,
 `/surface review`, and `/surface feedback` to open one workflow.
+`/surface stop` shuts down the page server and keeps the session's state; the
+next `/surface` starts a new server at a new URL.
+`/surface open` opens or reopens the workflow you used last (`/surface open
+review` picks one), starting the server again if it was stopped.
+
+Pages open in your default browser (`open` on macOS, `xdg-open` elsewhere). To
+use another program, set `surface.browser` in Pi's `settings.json`, globally or
+per project. `{url}` in `args` becomes the page URL; without it the URL is
+appended. The command runs directly, not through a shell. For example, to open
+pages with `terminal-browser` in a new window of the current tmux session:
+
+```json
+{
+  "surface": {
+    "browser": {
+      "command": "tmux",
+      "args": ["new-window", "-n", "surface", "terminal-browser", "open", "{url}"]
+    }
+  }
+}
+```
+
+Every page open uses this setting: the one an opening tool triggers,
+`/surface`, and `/surface open`.
 
 Workflow state lives in Pi's session log. Resuming a session restores its page
 state. Diffs and file contents come from the checkout, so keep that checkout

@@ -4,7 +4,7 @@ import css from "./ScoreTable.module.css";
 const PIPS = [1, 2, 3, 4, 5];
 
 /** The selected option's score and reason on each dimension. */
-export function ScoreTable({ dimensions, option, color }: { dimensions: readonly Dimension[]; option: Option; color: string }) {
+export function ScoreTable({ dimensions, option, color }: { dimensions: readonly Dimension[]; option: Pick<Option, "scores">; color: string }) {
   return (
     <table className={css.dims}>
       <tbody>

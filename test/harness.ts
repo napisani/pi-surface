@@ -1,6 +1,7 @@
 // Runs workflows the way the Pi extension does, without Pi: a real Surface
 // with a host that records what it would persist and send.
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { Json } from "../src/host/decode.ts";
 import { applyPatch, type PatchOp } from "../src/host/patch.ts";
 import { spawnRunner } from "../src/host/runner.ts";
 import { Surface } from "../src/host/surface.ts";
@@ -51,7 +52,7 @@ export interface FakeEntry {
 
 interface FakeContext {
   mode: string;
-  ui: { setStatus(key: string, text: string): void; setWidget(key: string, lines: string[] | undefined, options?: { placement?: string }): void; notify(): void };
+  ui: { setStatus(key: string, text: string): void; setWidget(key: string, lines: string[] | undefined, options?: { placement?: string }): void; notify(text: string): void };
   sessionManager: { getBranch(): FakeEntry[] };
 }
 
@@ -77,6 +78,11 @@ interface ToolResult {
   terminate?: boolean;
 }
 
+interface FakeCommand {
+  getArgumentCompletions?(prefix: string): { value: string }[] | null;
+  handler(args: string, ctx: FakeContext): Promise<void>;
+}
+
 interface FakeTool {
   name: string;
   defaultActive?: boolean;
@@ -84,10 +90,13 @@ interface FakeTool {
 }
 
 /** Just enough of ExtensionAPI to drive the real extension without a model. */
-export function fakePi() {
+export function fakePi(settings: Json = {}) {
   const handlers = new Map<string, Handler[]>();
   const tools = new Map<string, FakeTool>();
   const sent: Sent[] = [];
+  const commands = new Map<string, FakeCommand>();
+  const notices: string[] = [];
+  const execs: { command: string; args: string[] }[] = [];
   const entries: FakeEntry[] = [];
   const statuses = new Map<string, string>();
   const widgets = new Map<string, { lines: string[]; placement?: string }>();
@@ -101,11 +110,15 @@ export function fakePi() {
         active.push(tool.name);
       }
     },
-    registerCommand: () => undefined,
+    registerCommand: (name: string, command: FakeCommand) => commands.set(name, command),
     registerMessageRenderer: () => undefined,
     sendMessage: (message: Sent["message"], options: Sent["options"]) => sent.push({ message, options }),
     appendEntry: (customType: string, data: OpsEntry) => entries.push({ type: "custom", customType, data }),
-    exec: async () => ({ stdout: "", stderr: "", code: 0 }),
+    exec: async (command: string, args: string[]) => {
+      execs.push({ command, args });
+      return { stdout: "", stderr: "", code: 0 };
+    },
+    getSettings: () => structuredClone(settings),
     getActiveTools: () => [...active],
     setActiveTools: (names: string[]) => {
       setActiveCalls.push(names);
@@ -123,7 +136,7 @@ export function fakePi() {
           widgets.delete(key);
         }
       },
-      notify: () => undefined,
+      notify: (text: string) => notices.push(text),
     },
     sessionManager: { getBranch: () => branch },
   });
@@ -135,5 +148,6 @@ export function fakePi() {
   };
   // SAFETY: the fake implements every ExtensionAPI call the extension makes in these tests.
   const api: ExtensionAPI = pi as never;
-  return { pi: api, tools, sent, entries, statuses, widgets, emit, active: () => active, setActiveCalls };
+  const command = (name: string, args = "") => commands.get(name)!.handler(args, ctx([]));
+  return { pi: api, tools, commands, command, notices, execs, sent, entries, statuses, widgets, emit, active: () => active, setActiveCalls };
 }

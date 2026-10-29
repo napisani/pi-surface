@@ -184,6 +184,36 @@ test("invalid findings are rejected whole, naming every problem", async () => {
   }
 });
 
+test("a triage must follow the mvr-suggestions rules, and every finding needs every score", async () => {
+  const { review, close } = harness();
+  try {
+    await review.open(PINNED);
+    const deferredHigh = findingsInput();
+    deferredHigh.findings[0].triage!.bucket = "defer";
+    assert.throws(() => review.postFindings(deferredHigh), /finding 1: High findings are always fixed in this diff/);
+
+    const leaky = findingsInput();
+    leaky.findings[0].triage!.touches = ["src/auth.ts", "src/other.ts"];
+    assert.throws(() => review.postFindings(leaky), /finding 1: fix-now needs a Trivial or Small fix inside the diff's files \(src\/other.ts is outside\)/);
+
+    const overstated = findingsInput();
+    overstated.findings[0].triage!.bucket = "fix-now-expands";
+    assert.throws(() => review.postFindings(overstated), /finding 1: a Trivial fix inside the diff's files is fix-now/);
+
+    const unscored = findingsInput();
+    delete unscored.findings[1].scores!.safety;
+    delete unscored.findings[1].triage;
+    assert.throws(() => review.postFindings(unscored), /finding 2: needs a triage[\s\S]*finding 2: scores.safety needs a whole value/);
+
+    const renamed = findingsInput();
+    renamed.findings[0].triage!.touches = ["docs/old.md"];
+    review.postFindings(renamed);
+    assert.equal(review.state.review.findings[0].triage?.bucket, "fix-now");
+  } finally {
+    await close();
+  }
+});
+
 test("progress notes go only to a running review, and the page can stop one the agent abandoned", async () => {
   const { review, close } = harness();
   try {

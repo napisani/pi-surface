@@ -38,9 +38,9 @@ export function Radar({ dims, series, max = 5 }: { dims: readonly string[]; seri
         <polygon
           key={si}
           points={s.values.map((v, i) => pt(i, v).join(",")).join(" ")}
-          fill={s.color}
+          // A style, not attributes, so a color can be a CSS custom property.
+          style={{ fill: s.color, stroke: s.color }}
           fillOpacity={s.on ? 0.22 : 0.04}
-          stroke={s.color}
           strokeWidth={s.on ? 2.2 : 1}
           strokeOpacity={s.on ? 1 : 0.5}
         />

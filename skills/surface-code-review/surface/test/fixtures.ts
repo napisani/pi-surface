@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { FindingInput } from "../../../../src/kit/findings.ts";
+import { FINDING_DIMENSIONS, type FindingInput } from "../../../../src/kit/findings.ts";
 import type { CommentRequest } from "../github.ts";
 import type { FindingsInput } from "../state.ts";
 
@@ -99,6 +99,11 @@ process.stderr.write("fake gh: unexpected " + args.join(" ")); process.exit(2);
   };
 }
 
+/** A score on every axis, each overridable. */
+export function scores(overrides: Record<string, number> = {}): NonNullable<FindingInput["scores"]> {
+  return Object.fromEntries(FINDING_DIMENSIONS.map((d) => [d.id, { value: overrides[d.id] ?? 3, why: `${d.label} reason` }]));
+}
+
 export function looseEquality(): FindingInput {
   return {
     title: "Token compared with loose equality",
@@ -114,6 +119,8 @@ export function looseEquality(): FindingInput {
       { kind: "mermaid", label: "Flow", source: "flowchart LR\n  A[token] --> B{==}\n  B -->|coerced| C[ok]" },
       { kind: "data", label: "Cases", tables: [{ headers: ["token", "expected", "result"], rows: [["'1'", "1", "true"]], highlight: { "0": "bad" } }] },
     ],
+    triage: { bucket: "fix-now", fixSize: "Trivial", touches: ["src/auth.ts"], reason: "High severity and a one-character fix in a file the diff already changes." },
+    scores: scores({ impact: 4, confidence: 5, ease: 5, containment: 5 }),
   };
 }
 
@@ -129,6 +136,8 @@ export function findingsInput(): FindingsInput {
         category: "correctness-invariants",
         summary: "`log` is not imported.",
         primary: { path: "src/auth.ts", rev: "head", startLine: 4, endLine: 4 },
+        triage: { bucket: "defer", fixSize: "Large", touches: ["src/logger.ts"], reason: "Medium, and the logger it needs lives outside this diff; file a follow-up." },
+        scores: scores({ impact: 3, ease: 1, containment: 1 }),
       },
     ],
     dropped: [{ severity: "Low", title: "Rename ok", lens: "code-smells", reason: "style only" }],

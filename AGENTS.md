@@ -41,7 +41,11 @@ Workflows today:
   `main.tsx`, `hooks.ts` with the workflow's typed `useSelect` and `usePost`,
   and its components, composed from the kit) and `test/`.
 - `extension/index.ts` — Pi wiring: tool registration and activation,
-  replay on resume, `/surface`, the message renderer, and the raw page URL of
+  replay on resume, `/surface` (plus `/surface open`, which reopens the
+  workflow used last, and `/surface stop`, which closes the server until
+  `/surface` or an opening tool starts it again), opening pages with the
+  `surface.browser` setting (`extension/browser.ts`), the message renderer,
+  and the raw page URL of
   each workflow with state, shown under the editor (resume starts the server
   to show it). The package manifest declares both the extension and its skills;
   `pi install` loads them together. `prepare` builds the browser bundles even

@@ -6,10 +6,11 @@ import { Box, Text } from "@earendil-works/pi-tui";
 import type { Json } from "../src/host/decode.ts";
 import { CommandError, spawnRunner } from "../src/host/runner.ts";
 import { Surface } from "../src/host/surface.ts";
-import { MESSAGE_TYPE, OPS_ENTRY, SurfaceError, type AnyWorkflow, type OpsEntry, type SurfaceMessageDetails, type WorkflowId } from "../src/host/workflow.ts";
+import { MESSAGE_TYPE, messageOf, OPS_ENTRY, SurfaceError, type AnyWorkflow, type OpsEntry, type SurfaceMessageDetails, type WorkflowId } from "../src/host/workflow.ts";
 import forge from "../skills/surface-forge-solution/surface/workflow.ts";
 import review from "../skills/surface-code-review/surface/workflow.ts";
 import feedback from "../skills/surface-pr-feedback/surface/workflow.ts";
+import { browserArgv, configuredBrowser, defaultBrowser, type BrowserCommand } from "./browser.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_ROOT = join(ROOT, "web");
@@ -22,9 +23,31 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
   let surface: Surface | undefined;
   let ui: ExtensionContext["ui"] | undefined;
   let hasUI = false;
+  // Set by /surface stop so page changes stop restarting the server; /surface or an opening tool clears it.
+  let stopped = false;
+  // The workflow last opened or changed, which /surface open shows.
+  let current: WorkflowId | undefined;
   const activated = new Set<WorkflowId>();
 
-  const openBrowser = (url: string) => void pi.exec(process.platform === "darwin" ? "open" : "xdg-open", [url]).catch(() => undefined);
+  /** Opens url with the surface.browser setting, read on each open so /reload applies it. */
+  const openBrowser = async (url: string) => {
+    let browser: BrowserCommand | undefined;
+    try {
+      // A JSON round trip turns Pi's typed settings into plain JSON for decoding, keeping keys Pi does not know.
+      browser = configuredBrowser(JSON.parse(JSON.stringify(pi.getSettings())));
+    } catch (error) {
+      ui?.notify(`surface: the surface.browser setting is invalid (${messageOf(error)}); using the default browser`, "warning");
+    }
+    const { command, args } = browserArgv(browser ?? defaultBrowser(process.platform), url);
+    try {
+      const result = await pi.exec(command, args);
+      if (result.code !== 0) {
+        ui?.notify(`surface: ${command} exited with ${result.code}${result.stderr.trim() ? `: ${result.stderr.trim()}` : ""}`, "error");
+      }
+    } catch (error) {
+      ui?.notify(`surface: could not run ${command}: ${messageOf(error)}`, "error");
+    }
+  };
 
   const refreshStatus = (id: WorkflowId) => {
     const running = surface?.workflows.get(id);
@@ -43,7 +66,7 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
   const showUrls = () => ui?.setWidget(URL_WIDGET, pageUrls.size ? [...pageUrls.values()] : undefined, { placement: "belowEditor" });
   const trackUrl = (id: WorkflowId) => {
     const current = surface;
-    if (!current?.hasState(id) || pageUrls.has(id)) {
+    if (stopped || !current?.hasState(id) || pageUrls.has(id)) {
       return;
     }
     void current
@@ -72,6 +95,8 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
     await surface?.close();
     ui = ctx.ui;
     hasUI = ctx.mode === "tui";
+    stopped = false;
+    current = undefined;
     activated.clear();
     pageUrls.clear();
     showUrls();
@@ -89,12 +114,13 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
             { triggerTurn: true, deliverAs: "followUp" },
           ),
         changed: (id) => {
+          current = id;
           refreshStatus(id);
           trackUrl(id);
         },
         opened: (url) => {
           if (hasUI && !process.env.SURFACE_NO_OPEN) {
-            openBrowser(url);
+            void openBrowser(url);
           }
         },
         runner: spawnRunner,
@@ -103,6 +129,8 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
       WEB_ROOT,
       entries,
     );
+    // Entries are in session order, so the last one names the workflow used last.
+    current = entries.findLast((entry) => surface!.hasState(entry.workflow))?.workflow;
     for (const workflow of workflows) {
       if (!surface.hasState(workflow.id)) {
         continue;
@@ -140,6 +168,8 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
         async execute(_id, params) {
           if (tool.opens) {
             activate(workflow);
+            stopped = false;
+            current = workflow.id;
           }
           try {
             // SAFETY: Pi parses tool-call arguments from JSON and checks them against the tool's schema.
@@ -163,13 +193,41 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
     }
   }
 
+  const completions = [
+    { value: "open", label: "open", description: "Open the current workflow's page in the surface.browser setting's browser" },
+    { value: "stop", label: "stop", description: "Stop the page server; state is kept and /surface starts it again" },
+    ...workflows.map((w) => ({ value: w.id, label: w.id, description: `Open the ${w.title} page` })),
+  ];
+
   pi.registerCommand("surface", {
-    description: "Open the pi-surface page for this session, or one workflow's page: /surface [forge|review|feedback]",
+    description: `Open the pi-surface page for this session or one workflow's page, reopen the current workflow, or stop the server: /surface [${workflows.map((w) => w.id).join("|")}|open [workflow]|stop]`,
+    getArgumentCompletions: (prefix) => completions.filter((c) => c.value.startsWith(prefix.trim())),
     handler: async (args, ctx) => {
-      const id = args.trim() || undefined;
+      const arg = args.trim();
+      if (arg === "stop") {
+        const current = active();
+        if (!current.serving) {
+          ctx.ui.notify("surface: no server is running", "info");
+          return;
+        }
+        stopped = true;
+        await current.close();
+        // The next server gets a new port and token, so these links are dead.
+        pageUrls.clear();
+        showUrls();
+        ctx.ui.notify("surface: server stopped; /surface starts it again", "info");
+        return;
+      }
+      const [verb, target] = arg.split(/\s+/, 2);
+      // `open` with no workflow means the current one; the bare command and `/surface <id>` keep their own target.
+      const id = verb === "open" ? target || current : arg || undefined;
+      stopped = false;
       const url = await active().url(id);
       ctx.ui.notify(`surface: ${url}`, "info");
-      openBrowser(url);
+      await openBrowser(url);
+      for (const workflow of workflows) {
+        trackUrl(workflow.id);
+      }
     },
   });
 
