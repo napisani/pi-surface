@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { FeedbackItem } from "../state.ts";
-import { listGroups, stageOf, stepFrom, type ListFilter } from "../web/stage.ts";
+import { listGroups, stageOf, type ListFilter } from "../web/stage.ts";
 
 const item = (id: string, over: Partial<FeedbackItem> = {}): FeedbackItem => ({
   id,
@@ -36,14 +36,6 @@ test("listGroups orders by stage and hides what the filter hides", () => {
       ["reply", ["replying"]],
     ],
   );
-});
-
-test("stepFrom moves within the list and starts at the top", () => {
-  const order = [item("a"), item("b"), item("c")];
-  assert.equal(stepFrom(order, undefined, 1), "a");
-  assert.equal(stepFrom(order, "a", 1), "b");
-  assert.equal(stepFrom(order, "c", 1), "c");
-  assert.equal(stepFrom(order, "a", -1), "a");
 });
 
 test("listGroups can keep only one decision", () => {

@@ -23,13 +23,14 @@ test("the package manifest loads the extension and all bundled skills without ex
   assert.ok(extension.tools.has("surface_forge_ask"));
   assert.ok(extension.tools.has("surface_review_open"));
   assert.ok(extension.tools.has("surface_feedback_open"));
+  assert.ok(extension.tools.has("surface_plan_open"));
   assert.deepEqual(loader.getSkills().diagnostics, []);
   assert.deepEqual(
     loader.getSkills().skills
       .filter((skill) => skill.filePath.startsWith(join(root, "skills/")))
       .map((skill) => skill.name)
       .sort(),
-    ["surface-code-review", "surface-forge-solution", "surface-pr-feedback"],
+    ["surface-code-review", "surface-forge-solution", "surface-plan-large-change", "surface-pr-feedback"],
   );
 });
 
@@ -42,6 +43,7 @@ test("Pi's own loader accepts every skill pi-surface ships, and only the user ca
     [
       ["surface-code-review", true],
       ["surface-forge-solution", true],
+      ["surface-plan-large-change", true],
       ["surface-pr-feedback", true],
     ],
   );

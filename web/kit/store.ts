@@ -1,10 +1,11 @@
 // The page's copy of the workflow's state document, and how components reach
 // it. The store changes only by applying the server's snapshots and deltas;
 // components subscribe to the slice they render through useSelect.
-import { createContext, createElement, useCallback, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { applyPatchImmutable, type PatchOp } from "../../src/host/patch.ts";
 import { messageOf, type SurfaceAction } from "../../src/host/workflow.ts";
 import { serverError } from "./hooks/fetchText.ts";
+import { createValueStore, useValue, type ValueStore } from "./valueStore.ts";
 
 export interface PageStore<S> {
   get(): S | null;
@@ -87,6 +88,7 @@ interface Surface {
   store: PageStore<unknown>;
   status: PageStatus;
   post: PostFn;
+  drafts: Map<string, ValueStore<string>>;
 }
 
 const SurfaceContext = createContext<Surface | null>(null);
@@ -122,7 +124,7 @@ export function SurfaceProvider<S>(props: { store: PageStore<S>; status?: PageSt
     const status = props.status ?? new PageStatus();
     // SAFETY: the store is read back only through createSurfaceHooks<S>, whose S is this page's state type.
     const store = props.store as PageStore<unknown>;
-    return { store, status, post: props.post ?? fetchPost(status, () => undefined) };
+    return { store, status, post: props.post ?? fetchPost(status, () => undefined), drafts: new Map() };
   });
   return createElement(SurfaceContext.Provider, { value }, props.children);
 }
@@ -159,6 +161,20 @@ export function createSurfaceHooks<S, A extends SurfaceAction>() {
     return useSurfaceContext().post;
   }
   return { useSelect, useReadState, usePost };
+}
+
+/** Drafts belong to the page and context, not a component that navigation may unmount. */
+export function useDraft(key: string, initial = ""): [string, (text: string) => void] {
+  const { drafts } = useSurfaceContext();
+  const draft = useMemo(() => {
+    let value = drafts.get(key);
+    if (!value) {
+      value = createValueStore(initial);
+      drafts.set(key, value);
+    }
+    return value;
+  }, [drafts, key, initial]);
+  return [useValue(draft), draft.set];
 }
 
 /** True while the action posted under this key is in flight. */

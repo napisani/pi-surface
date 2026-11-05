@@ -6,3 +6,5 @@ import { NO_FILTERS, type Composer, type FileFilters } from "./lineItems.ts";
 export const composerStore = createValueStore<Composer | null>(null);
 export const filterStore = createValueStore<FileFilters>(NO_FILTERS);
 export const collapsedStore = createValueStore<ReadonlySet<string>>(new Set());
+/** The token the user clicked in the diff, and where, while its menu is open. */
+export const tokenMenuStore = createValueStore<{ token: string; x: number; y: number } | null>(null);

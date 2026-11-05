@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { browserArgv, configuredBrowser, defaultBrowser } from "../../extension/browser.ts";
 import { registerSurface, WORKFLOWS } from "../../extension/index.ts";
-import { SurfaceError } from "../../src/host/workflow.ts";
+import { Type } from "typebox";
+import { defineSurfaceTool, SurfaceError } from "../../src/host/workflow.ts";
 import { fakePi } from "../harness.ts";
 import { postAction } from "../sse.ts";
 import { counter } from "./counter.ts";
@@ -158,14 +159,31 @@ test("a malformed surface.browser setting warns and falls back to the default br
   }
 });
 
+test("an always-declared tool is active from the start and runs without opening its workflow; pages can list Pi's models", async () => {
+  const host = fakePi();
+  const a = counter("a");
+  const report = defineSurfaceTool({ name: "surface_a_report", label: "report", description: "report", always: true, parameters: Type.Object({}), run: () => ({ text: "reported" }) });
+  registerSurface(host.pi, [{ ...a, tools: [...a.tools, report] }]);
+  await host.emit("session_start");
+  try {
+    assert.deepEqual(host.active().sort(), ["surface_a_open", "surface_a_report"]);
+    assert.equal((await host.tools.get("surface_a_report")!.execute("c1", {})).content[0].text, "reported");
+    assert.deepEqual(host.active().sort(), ["surface_a_open", "surface_a_report"], "running it does not open the workflow");
+    const opened = await host.tools.get("surface_a_open")!.execute("c2", {});
+    assert.deepEqual(await (await fetch(`${opened.details.url}models`)).json(), ["openai-codex/gpt-6-luna", "claude-bridge/claude-sonnet-5-5"]);
+  } finally {
+    await host.emit("session_shutdown");
+  }
+});
+
 test("the extension registers every workflow's tools under the surface prefix", async () => {
   const host = fakePi();
   registerSurface(host.pi);
-  assert.deepEqual(WORKFLOWS.map((w) => w.id), ["forge", "review", "feedback"]);
+  assert.deepEqual(WORKFLOWS.map((w) => w.id), ["forge", "review", "feedback", "plan"]);
   assert.ok([...host.tools.keys()].every((name) => name.startsWith("surface_")));
   assert.deepEqual(
     [...host.tools.values()].filter((t) => t.defaultActive).map((t) => t.name),
-    ["surface_forge_ask", "surface_review_open", "surface_feedback_open"],
+    ["surface_forge_ask", "surface_review_open", "surface_feedback_open", "surface_plan_open", "surface_plan_slice_report"],
   );
-  assert.equal(host.tools.size, 20);
+  assert.equal(host.tools.size, 34);
 });

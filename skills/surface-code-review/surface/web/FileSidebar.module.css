@@ -1,8 +1,15 @@
 .sidebar{position:sticky;top:calc(var(--head) + 16px);max-height:calc(100vh - var(--head) - 32px);display:flex;flex-direction:column;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
 .search{width:100%}
 .cats{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.changes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.changes .cat{padding:4px 6px;gap:4px;min-width:0}
 .cat{display:flex;gap:6px;align-items:center;background:none;border:1px solid var(--line);color:var(--faint);border-radius:7px;padding:4px 8px;cursor:pointer;font:inherit;font-size:12px;user-select:none}
 .on{color:var(--ink);background:var(--panel2);border-color:var(--hover-line)}
 .n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
 .toggles{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--dim)}
 .meta{font-size:11px;color:var(--faint);border-top:1px solid var(--line);padding-top:6px}
+.token{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);border:1px solid var(--hover-line);border-radius:7px;padding:3px 4px 3px 8px}
+.token span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.token code{font-family:var(--mono);color:var(--amber-ink)}
+.token button{background:none;border:0;color:var(--faint);font-size:15px;line-height:1;cursor:pointer;padding:0 4px}
+.token button:hover{color:var(--ink)}

@@ -1,0 +1,15 @@
+.layout{display:flex;flex-direction:column;gap:12px}
+.switch{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font:12px var(--mono);background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--tone,var(--line));border-radius:6px;color:var(--dim);padding:2px 8px;cursor:pointer}
+.chip:hover,.on{color:var(--ink);background:var(--panel2);border-color:var(--hover-line)}
+.open{--tone:var(--amber)}.active{--tone:var(--blue)}.done{--tone:var(--green)}.blocked{--tone:#5b5a55}.muted{--tone:var(--line)}
+.title{margin:4px 0 0}
+.id{font-family:var(--mono);color:var(--amber)}
+.ref{background:none;border:0;color:var(--amber-ink);font:inherit;cursor:pointer;padding:0 2px;text-decoration:underline}
+.grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:14px;align-items:start}
+.tradeoffs{display:flex;flex-wrap:wrap;gap:12px}
+.decide{display:flex;gap:8px;align-items:center;margin-top:8px}
+.decide input{flex:1}
+.text{width:100%;font:13px var(--sans)}
+.focus{flex:1;min-width:200px}
+.run{display:flex;flex-direction:column;gap:4px}

@@ -92,6 +92,38 @@ you to approve them on the page. It does not implement the design.
 
 ![Forge page comparing cache isolation options with ER diagrams, trade-off scores, and a follow-up question](docs/images/forge.png)
 
+### Plan a large change
+
+```text
+/skill:surface-plan-large-change Plan the move to per-tenant usage metering.
+```
+
+For an effort too big for one session. Name the destination, then work a map of
+questions: the agent puts options on the ones you decide, and runs research and
+spikes (each approach built in its own worktree) as subagents while you decide
+others. Fog marks what you can see coming but cannot ask yet. Once the route is
+clear, the agent draws the current and target architecture and breaks the work
+into slices you approve, each with a brief someone can build from. It writes an
+RFC, an architecture doc and a decision log for team buy-in, and a slice can go
+to a forge session for its own design.
+
+Plans live outside the checkout, under `surface.plans.root` in Pi's settings
+(default `~/Work`), then the repository's name and the plan's slug, so they
+outlast sessions and every worktree of a repo shares them. `state.json` is the
+source of truth; `map.md`, `decisions/`, `slices/` and `architecture.md` beside
+it are regenerated on every change. Sessions building a slice report back with
+the `surface_plan_slice_report` tool, which every session has. One session edits
+a plan at a time; another opens it read-only until it takes over.
+
+### Second opinions
+
+On a plan's nodes, map, architecture, slices and artifacts, a forge question or
+draft, or a code review's findings and walkthrough, ask another model to review
+what the agent wrote. Pick the reviewer from the models Pi can run and a review
+prompt. Triage what it finds, send the accepted findings back to the original
+author for corrections, rule on the ones the author declines, and see what
+changed. A review can run up to three passes.
+
 ### Work through PR feedback
 
 ```text
@@ -109,6 +141,17 @@ You can also paste feedback into Pi chat without a GitHub PR.
 
 These screenshots use the included demo fixtures, not a private repository or a
 live GitHub PR.
+
+## Keyboard navigation
+
+Press **`;`** and pause for which-key hints. **`;fk`** searches commands, **`;fe`**
+picks a view, and **`;v?`** composes a question about the current context.
+In diffs, **`]g` / `[g`** (also **`]c` / `[c`**) move between hunks across files.
+Typing in an editor never activates navigation; Escape leaves it without losing
+its draft. The **Keys** button lists the commands and effective bindings.
+
+See [Keyboard behavior](BEHAVIOR.md) for workflow defaults, user overrides in
+`~/.pi/agent/surface-keybindings.json`, and the shared command interface.
 
 ## Sessions and local access
 

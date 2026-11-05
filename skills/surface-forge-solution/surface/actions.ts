@@ -2,11 +2,14 @@ import { Type, type Static, type TProperties } from "typebox";
 import { decodeAction, trimmed, type Json } from "../../../src/host/decode.ts";
 import { applyPatch, type PatchOp } from "../../../src/host/patch.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
+import type { OpinionTarget, TargetInfo } from "../../../src/kit/opinion.ts";
+import { isOpinionAction, OPINION_ACTIONS, resolveOpinionAction, type OpinionScope } from "../../../src/kit/opinionActions.ts";
 import {
   addThreadMessage,
   awaitingApproval,
   deferQuestion,
   DRAFT_NAMES,
+  opinionsPtr,
   openInRound,
   recordAnswer,
   reopenDecision,
@@ -37,6 +40,7 @@ const ACTIONS = {
   rfc: action("rfc", { requested: Type.Boolean() }),
   draft: action("draft", { kind: Kind }),
   "draft.review": action("draft.review", { kind: Kind, verdict: Type.Enum(["approve", "approveWithRfc", "changes"]), note: OptionalText }),
+  ...OPINION_ACTIONS,
 };
 
 export type ForgeAction = Static<(typeof ACTIONS)[keyof typeof ACTIONS]>;
@@ -143,7 +147,43 @@ export interface Resolution {
   message?: AgentMessage;
 }
 
+/** What a second opinion on a forge question or draft reviews, and how its author revises it. */
+function opinionScope(state: ForgeState): OpinionScope<ForgeState> {
+  const brief = (kind: string, id: string): TargetInfo => {
+    if (kind === "question") {
+      const q = questionOf(state, id);
+      const options = q.options.map((o) => `- ${o.id} ${o.label}${o.recommended ? " (recommended)" : ""}: ${o.description} Pros: ${o.pros.join("; ")}. Cons: ${o.cons.join("; ")}.`);
+      return {
+        label: `${q.id} ${q.header}`,
+        brief: { content: [`forge question ${q.id}: ${q.title}`, ...options].join("\n"), revise: `revise the options with surface_forge_reply (questionId "${q.id}", optionId and revise) or re-ask it with surface_forge_ask using id "${q.id}" if it is reopened. Never change an answer the user gave.` },
+      };
+    }
+    if (kind === "draft" && (id === "spec" || id === "rfc")) {
+      const draft = state.drafts[id];
+      if (!draft?.markdown) {
+        throw new SurfaceError(`there is no ${DRAFT_NAMES[id]} yet`);
+      }
+      return {
+        label: `the ${DRAFT_NAMES[id]}`,
+        brief: { content: draft.path ? `the ${DRAFT_NAMES[id]} at ${draft.path}` : `the ${DRAFT_NAMES[id]} on the forge Overview:\n\n${draft.markdown}`, revise: `edit it${draft.path ? ` at ${draft.path}` : ""} and republish it with surface_forge_draft kind "${id}".` },
+      };
+    }
+    throw new SurfaceError(`a second opinion cannot target "${kind}"`);
+  };
+  return {
+    list: opinionsPtr,
+    opinions: state.opinions,
+    target: (kind, id): OpinionTarget => ({ kind, id, label: brief(kind, id).label }),
+    brief: (t) => brief(t.kind, t.id).brief,
+    tools: { findings: "surface_forge_opinion", update: "surface_forge_opinion_update" },
+  };
+}
+
 export function resolveAction(state: ForgeState, action: ForgeAction, now: string): Resolution {
+  if (isOpinionAction(action)) {
+    const { ops, message } = resolveOpinionAction(opinionScope(state), action, now);
+    return { ops, message: message ? { content: message, details: action } : undefined };
+  }
   switch (action.type) {
     case "answer":
     case "defer": {

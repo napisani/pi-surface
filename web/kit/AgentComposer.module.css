@@ -1,0 +1,2 @@
+.composer{position:fixed;bottom:20px;right:20px;z-index:80;width:min(620px,94vw);background:var(--panel2);border:1px solid var(--hover-line);border-radius:8px;box-shadow:0 10px 40px #0008;padding:16px}
+.composer header{display:flex;justify-content:space-between;gap:12px;font:13px var(--mono);color:var(--amber-ink);margin-bottom:8px}.composer small{color:var(--dim);overflow-wrap:anywhere}.composer textarea{margin:12px 0}.composer footer{display:flex;justify-content:flex-end;gap:8px}.composer p{color:var(--dl-ink)}

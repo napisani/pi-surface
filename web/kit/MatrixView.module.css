@@ -1,0 +1,11 @@
+.wrap{overflow:auto}
+.table{border-collapse:collapse;font-size:12.5px;margin:6px 0}
+.table th,.table td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+.table thead th{background:var(--panel2);padding:0}
+.table tbody th{background:var(--panel2);color:var(--ink);font-weight:600;white-space:nowrap}
+.sort{background:none;border:0;color:var(--dim);font:inherit;font-weight:600;padding:5px 9px;cursor:pointer;width:100%;text-align:left}
+.sort:hover,.on{color:var(--ink)}
+.good{background:var(--ok-bg)}
+.bad{background:var(--bad-bg)}
+.warn{background:#241d12}
+.dot{color:var(--faint);margin-left:4px}

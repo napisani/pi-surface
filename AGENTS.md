@@ -12,6 +12,7 @@ Workflows today:
 | `surface-forge-solution` | `forge`: design decisions, drafts and their approval | `surface_forge_ask` |
 | `surface-code-review` | `review`: diffs, change requests, findings, walkthrough, GitHub comments | `surface_review_open` |
 | `surface-pr-feedback` | `feedback`: triage, fix rounds, commits, pushes, replies | `surface_feedback_open` |
+| `surface-plan-large-change` | `plan`: a multi-session plan's map of decisions, architecture, slices, artifacts | `surface_plan_open` |
 
 ## Layout
 
@@ -23,16 +24,23 @@ Workflows today:
   (`runner.ts`).
 - `src/kit/` — shared Node-side pieces workflows build on: state helpers for
   threads, tasks, request rounds and GitHub drafts; code refs, revisions and
-  visuals; git helpers and the blob route; TypeBox schemas; prop types for
-  the component catalog.
+  visuals (including the wireframe parser and the sandboxed-view document);
+  option validation; second opinions (`opinion.ts` state and agent messages,
+  `opinionActions.ts` page actions, `opinionTools.ts` the agent tools); git
+  helpers and the blob route; TypeBox schemas; prop types for the component
+  catalog.
 - `web/kit/` — the React page kit: `shell.tsx` (`mountWorkflow`: the state
   stream, the store, toasts, the outer error boundary), `store.ts` (the page
   store, `SurfaceProvider`, `createSurfaceHooks<S, A>()`, `usePending`),
-  `hooks/` (blob and diff loading, URL-hash and localStorage state, one shared
-  keydown listener, jumping a `CodeView` to a line), `primitives/` (Button,
+  `hooks/` (blob and diff loading, URL-hash and localStorage state, jumping a
+  `CodeView` to a line), the shared keyboard module and which-key/picker UI,
+  `primitives/` (Button,
   Badge, Card, Panel, Row and the other building blocks), `theme.css`, and
   the dev-task components (diffs and code refs, file tree, markdown, visuals,
-  threads, rounds, drafts, findings, tour, commit plans, scored options).
+  threads, rounds, drafts, findings, tour, commit plans, scored options,
+  second opinions). Visuals include graphs on one layered layout
+  (`graphLayout.ts`), matrices, heatmaps, state machines, architecture diffs,
+  wireframes and sandboxed agent-built views.
   One exported component per PascalCase `.tsx`, each with its own
   `.module.css`.
 - `skills/<skill>/surface/` — one workflow each: `workflow.ts` (definition
@@ -74,8 +82,12 @@ kit when it renders a general dev concept.
   `Store`, persisted as one `surface-ops` entry `{ workflow, ops }`, and
   broadcast on that workflow's event stream. Resume replays the active
   branch's entries per workflow, so never mutate state outside `ctx.commit`.
-- Only a workflow's opening tool is declared until it opens or resume finds
-  state for it; tools are never switched off during a session.
+  A workflow with `persistence: "own"` (the plan) saves its state itself and
+  logs only what it passes to `ctx.remember`; its session's `restore()`
+  reloads the rest after replay.
+- Only a workflow's opening tool, and tools marked `always` (the plan's slice
+  report, which other sessions call), are declared until it opens or resume
+  finds state for it; tools are never switched off during a session.
 - State ops are built with typed pointers (`at<State>()(...)`) so segments and
   values are checked by `tsc`; `test/host/ptr.types.ts` guards the types.
 - The server binds 127.0.0.1 only, requires the per-session path token,
@@ -91,6 +103,10 @@ kit when it renders a general dev concept.
   runs without `rehype-raw`, the forge draft is parsed to a syntax tree with
   raw HTML dropped (`surface/draft.ts`), and `dangerouslySetInnerHTML` appears
   nowhere. Mermaid's strict-mode SVG is the one string set as `innerHTML`.
+  The one place agent-written HTML runs is a `view` visual: `SandboxedView`
+  puts it in an iframe with `sandbox="allow-scripts"` and no same-origin, under
+  a no-network content policy injected ahead of the agent's markup
+  (`src/kit/sandbox.ts`), and talks to it only by `postMessage`. Keep all three.
 - Only a user's click writes outside the worktree: posting to GitHub,
   resolving threads, committing and pushing. Agent tools write drafts and
   proposals only.
@@ -116,6 +132,10 @@ kit when it renders a general dev concept.
   annotations or collapsed state do (`web/kit/diffItems.ts`).
 - Tabs hide with `Activity`, except the tabs holding a pierre `CodeView`,
   which hide with CSS: `CodeView` builds its viewer in a callback ref.
+- When adding commands, changing keyboard behavior, or adding navigable panes,
+  read [BEHAVIOR.md](BEHAVIOR.md). Register through `useCommands` and explicitly
+  activate tab scopes; CSS-hidden tabs stay mounted. The shared provider owns
+  the document key listener. Use page-owned `useDraft` for navigation-safe text.
 - Navigation state (tab, selected item, step) lives in the URL hash, so a
   reload lands in the same place; view preferences live in localStorage under
   `surface:v1:`.

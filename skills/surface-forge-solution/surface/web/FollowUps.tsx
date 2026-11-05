@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { AgentComposer } from "../../../../web/kit/AgentComposer.tsx";
 import { cx } from "../../../../web/kit/cx.ts";
 import { AskRow } from "../../../../web/kit/primitives/AskRow.tsx";
 import { Note } from "../../../../web/kit/primitives/Note.tsx";
@@ -10,13 +12,15 @@ import { usePost } from "./hooks.ts";
 /** Questions to the agent about one decision; asking does not answer it. */
 export function FollowUps({ question: q, selectedId }: { question: Question; selectedId: string }) {
   const post = usePost();
+  const conversation = useRef<HTMLDivElement>(null);
   const key = `followUp:${q.id}`;
   const waiting = usePending(key) || q.thread.at(-1)?.role === "user";
   const optionLabel = (id: string) => q.options.find((o) => o.id === id)?.label ?? id;
   return (
     <Panel>
       <h3>Follow-up on this question</h3>
-      <div className={css.thread}>
+      <AgentComposer id="forge.question" prepare={() => ({ key: `question:${q.id}:${selectedId}`, label: q.header, reference: `${q.id} · option ${selectedId}`, ask: (text) => post({ type: "followUp", questionId: q.id, optionId: selectedId, text }, key), onSent: () => conversation.current?.focus() })} />
+      <div className={css.thread} ref={conversation} tabIndex={-1}>
         {q.thread.length || waiting ? (
           <>
             {q.thread.map((m, i) => (

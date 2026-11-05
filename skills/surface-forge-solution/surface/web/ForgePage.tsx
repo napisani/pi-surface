@@ -1,6 +1,7 @@
 // The forge page: one design decision at a time on Questions, the whole
 // design on Overview, with drafts of the spec and RFC and their approval.
 import { Activity } from "react";
+import { KeyboardScope } from "../../../../web/kit/KeyboardScope.tsx";
 import { cx } from "../../../../web/kit/cx.ts";
 import { ErrorBoundary } from "../../../../web/kit/ErrorBoundary.tsx";
 import { useHashChoice } from "../../../../web/kit/hooks/useHashState.ts";
@@ -57,12 +58,12 @@ export function ForgePage() {
       <PageMain className={css.main}>
         <Activity mode={view === "q" ? "visible" : "hidden"}>
           <ErrorBoundary name="questions">
-            <QuestionsView />
+            <KeyboardScope name="questions" active={view === "q"}><QuestionsView /></KeyboardScope>
           </ErrorBoundary>
         </Activity>
         <Activity mode={view === "o" ? "visible" : "hidden"}>
           <ErrorBoundary name="overview">
-            <OverviewView />
+            <KeyboardScope name="overview" active={view === "o"}><OverviewView /></KeyboardScope>
           </ErrorBoundary>
         </Activity>
       </PageMain>

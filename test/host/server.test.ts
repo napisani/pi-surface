@@ -58,6 +58,11 @@ test("pages, bundles and routes are served under the token only", async () => {
     assert.equal(await (await fetch(new URL("r/echo?q=hi", page))).text(), "echo:hi");
     assert.equal((await fetch(new URL("r/missing", page))).status, 404);
     assert.equal((await fetch(new URL("../nope/", page))).status, 404);
+    const keys = await fetch(new URL("keybindings", page));
+    assert.equal(keys.status, 200);
+    assert.match(keys.headers.get("content-type") ?? "", /application\/json/);
+    assert.equal((await fetch(`${origin}/wrong-token/a/keybindings`)).status, 404);
+    assert.equal(await statusWithHost(new URL("keybindings", page).href, "evil.example"), 403);
     assert.equal((await fetch(`${origin}/wrong-token/a/`)).status, 404);
     assert.equal(await statusWithHost(page, "evil.example"), 403, "a rebound DNS name is refused");
   } finally {

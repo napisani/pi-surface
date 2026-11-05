@@ -1,10 +1,12 @@
 import type { PatchOp } from "../../../src/host/patch.ts";
 import type { SpecDimension } from "../../../src/kit/options.ts";
 import type { SurfaceContext, WorkflowSession } from "../../../src/host/workflow.ts";
+import { applyOpinionUpdate, postFindings, type FindingInput, type OpinionUpdate } from "../../../src/kit/opinion.ts";
+import type { OpinionSession } from "../../../src/kit/opinionTools.ts";
 import { resolveAction, type ForgeAction } from "./actions.ts";
-import { addThreadMessage, postDraft, postRound, reviseOption, setRfcRequested, type DraftKind, type ForgeState, type OptionRevision, type QuestionInput, type ThreadMessage } from "./state.ts";
+import { addThreadMessage, opinionsPtr, postDraft, postRound, reviseOption, setRfcRequested, type DraftKind, type ForgeState, type OptionRevision, type QuestionInput, type ThreadMessage } from "./state.ts";
 
-export class ForgeSession implements WorkflowSession<ForgeAction> {
+export class ForgeSession implements WorkflowSession<ForgeAction>, OpinionSession {
   readonly #ctx: SurfaceContext<ForgeState>;
 
   constructor(ctx: SurfaceContext<ForgeState>) {
@@ -50,6 +52,14 @@ export class ForgeSession implements WorkflowSession<ForgeAction> {
   /** Shows a draft on the Overview, recording which decisions it reflects. */
   postDraft(kind: DraftKind, markdown: string, options: { final?: boolean; path?: string } = {}): void {
     this.#commit(postDraft(this.state, kind, markdown, this.#ctx.now(), options));
+  }
+
+  postOpinionFindings(opinionId: string, input: { findings: FindingInput[]; summary?: string; runId?: string } | { failed: string }): void {
+    this.#commit(postFindings(opinionsPtr, this.state.opinions, opinionId, input, this.#ctx.now()));
+  }
+
+  updateOpinion(opinionId: string, update: OpinionUpdate): void {
+    this.#commit(applyOpinionUpdate(opinionsPtr, this.state.opinions, opinionId, update, this.#ctx.now()));
   }
 
   async handleAction(action: ForgeAction): Promise<void> {

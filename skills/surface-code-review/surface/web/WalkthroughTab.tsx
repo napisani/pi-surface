@@ -1,5 +1,6 @@
 // The Walkthrough tab: an ordered tour of the changes, one step beside its code.
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { AgentComposer } from "../../../../web/kit/AgentComposer.tsx";
 import { anchorOf } from "../../../../src/kit/code.ts";
 import { useHashState } from "../../../../web/kit/hooks/useHashState.ts";
 import { Markdown } from "../../../../web/kit/Markdown.tsx";
@@ -8,6 +9,7 @@ import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { TaskBar } from "../../../../web/kit/primitives/TaskBar.tsx";
+import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { TaskBanner } from "../../../../web/kit/TaskBanner.tsx";
 import { Tour } from "../../../../web/kit/Tour.tsx";
@@ -18,6 +20,9 @@ import { useNav } from "./nav.ts";
 import { QuestionCard } from "./QuestionCard.tsx";
 
 const selectTour = (s: ReviewState) => s.walkthrough;
+const selectOpinions = (s: ReviewState) => s.opinions;
+const selectReviewer = (s: ReviewState) => s.reviewer;
+const WALKTHROUGH_TARGET = { kind: "walkthrough", id: "tour", label: "the walkthrough" };
 const selectQuestions = (s: ReviewState) => s.questions;
 const selectFiles = (s: ReviewState) => s.files;
 
@@ -30,9 +35,12 @@ function generateLabel(running: boolean, written: boolean): string {
 
 export function WalkthroughTab() {
   const post = usePost();
+  const conversation = useRef<HTMLDivElement>(null);
   const nav = useNav();
   const mode = useMode();
   const tour = useReview(selectTour);
+  const opinions = useReview(selectOpinions);
+  const reviewer = useReview(selectReviewer);
   const questions = useReview(selectQuestions);
   const files = useReview(selectFiles);
   const starting = usePending("tour");
@@ -67,7 +75,8 @@ export function WalkthroughTab() {
             index={index}
             go={go}
             extras={
-              <>
+              <div ref={conversation} tabIndex={-1}>
+                <AgentComposer id="review.walkthrough" prepare={() => ({ key: `step:${step.id}`, label: step.title, reference: `@${step.ref.path}:${step.ref.startLine}-${step.ref.endLine} (${step.ref.rev})`, ask: (text) => post({ type: "question.ask", stepId: step.id, text }, `step-${step.id}`), onSent: () => conversation.current?.focus() })} />
                 {stepQuestions.map((q) => (
                   <QuestionCard key={q.id} question={q} />
                 ))}
@@ -77,7 +86,7 @@ export function WalkthroughTab() {
                   pendingKey={`step-${step.id}`}
                   onSend={(text) => post({ type: "question.ask", stepId: step.id, text }, `step-${step.id}`)}
                 />
-              </>
+              </div>
             }
             refProps={{
               diffRev: sideRev(mode, "RIGHT"),
@@ -85,6 +94,7 @@ export function WalkthroughTab() {
               onOpen: inPr ? () => nav.jumpTo(anchorOf(step.ref)) : undefined,
             }}
           />
+          {running ? null : <SecondOpinion target={WALKTHROUGH_TARGET} opinions={opinions} defaults={reviewer} />}
         </>
       ) : null}
     </>

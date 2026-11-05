@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { Json } from "./decode.ts";
+import { loadKeybindings } from "./keybindings.ts";
 import type { PatchOp } from "./patch.ts";
 import { CommandError } from "./runner.ts";
 import type { Store } from "./store.ts";
@@ -20,6 +21,8 @@ export interface ServedWorkflow {
 export interface SurfaceServerOptions {
   workflows: ReadonlyMap<string, ServedWorkflow>;
   webRoot: string;
+  /** The models Pi can run, served to pages that let the user pick one. */
+  models?: () => string[];
   port?: number;
   token?: string;
 }
@@ -110,7 +113,13 @@ function index(workflows: ReadonlyMap<string, ServedWorkflow>): string {
  */
 export async function startSurfaceServer(options: SurfaceServerOptions): Promise<SurfaceServer> {
   const token = options.token ?? randomBytes(18).toString("base64url");
+  const keybindings = await loadKeybindings();
   const clients = new Set<ServerResponse>();
+  /** Read-only JSON every page may fetch: its keyboard configuration and the models Pi can run. */
+  const jsonRoutes = new Map([
+    ["keybindings", () => JSON.stringify(keybindings)],
+    ["models", () => JSON.stringify(options.models?.() ?? [])],
+  ]);
   let port = 0;
   const allowedHosts = () => new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
   const allowedOrigins = () => new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`]);
@@ -160,6 +169,10 @@ export async function startSurfaceServer(options: SurfaceServerOptions): Promise
     }
     if (get && route === "") {
       return sendText(res, shell(workflow.definition.id, workflow.definition.title), "text/html; charset=utf-8");
+    }
+    const json = get ? jsonRoutes.get(route) : undefined;
+    if (json) {
+      return sendText(res, json(), "application/json; charset=utf-8");
     }
     if (get && route === "events") {
       return streamEvents(res, workflow);

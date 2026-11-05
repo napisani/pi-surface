@@ -6,6 +6,7 @@ import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Segmented } from "../../../../web/kit/primitives/Segmented.tsx";
+import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { copyText } from "../../../../web/kit/toast.ts";
 import { decisionBasis, DRAFT_NAMES, type Draft, type DraftKind, type ForgeState } from "../state.ts";
@@ -103,6 +104,7 @@ export function DraftPanel() {
         ) : (
           <EmptyState title={`No ${name} draft yet.`}>The agent writes it from the decisions so far. Anything not decided yet shows as TBD, linked to its question.</EmptyState>
         )}
+        {markdown && !draft?.writing ? <SecondOpinion target={{ kind: "draft", id: kind, label: `the ${name}` }} opinions={state.opinions} defaults={state.reviewer} /> : null}
       </Panel>
     </div>
   );

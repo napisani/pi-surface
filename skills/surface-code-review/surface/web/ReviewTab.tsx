@@ -1,6 +1,8 @@
 // The Review tab: run the multi-valued review, then read, question, dismiss
 // and turn its findings into comments or change requests.
 import { useEffect, useRef, useState } from "react";
+import { adjacentId } from "../../../../web/kit/keyboard.ts";
+import { useCommands, useKeyboard } from "../../../../web/kit/keyboardContext.ts";
 import { useHashState } from "../../../../web/kit/hooks/useHashState.ts";
 import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
@@ -32,6 +34,16 @@ export function ReviewTab() {
   const detail = useRef<HTMLDivElement>(null);
   const running = run.status === "running";
   const active = run.findings.find((f) => f.id === findingId) ?? run.findings.find((f) => !f.dismissed);
+  const keyboard = useKeyboard();
+  const move = (delta: number) => {
+    const id = adjacentId(run.findings.filter((finding) => !finding.dismissed).map((finding) => finding.id), active?.id, delta);
+    if (id) { setFinding(id); }
+  };
+  useCommands([
+    { id: "review.finding.next", label: "Next finding", keys: ["]d", "j"], run: () => move(1) },
+    { id: "review.finding.previous", label: "Previous finding", keys: ["[d", "k"], run: () => move(-1) },
+    { id: "review.finding.find", label: "Find a finding", keys: ["<leader>fq"], run: () => keyboard?.pick("Findings", run.findings.map((finding) => ({ id: finding.id, label: finding.title, run: () => setFinding(finding.id) }))) },
+  ]);
   useEffect(() => {
     if (findingId) {
       detail.current?.scrollIntoView({ block: "start", behavior: "smooth" });

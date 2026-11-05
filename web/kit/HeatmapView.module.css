@@ -1,0 +1,5 @@
+.wrap{overflow:auto}
+.table{border-collapse:collapse;font-size:12px;margin:6px 0}
+.table th{color:var(--dim);font-weight:600;padding:4px 8px;text-align:left;white-space:nowrap}
+.table thead th{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding:8px 4px}
+.table td{width:34px;height:28px;text-align:center;font-family:var(--mono);color:var(--ink);border:1px solid var(--bg);background:color-mix(in srgb,var(--high) var(--heat),var(--panel2))}

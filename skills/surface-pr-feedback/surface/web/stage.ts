@@ -38,15 +38,3 @@ export function listGroups(items: readonly FeedbackItem[], filter: ListFilter): 
   );
   return STAGES.map(([stage, label]) => ({ stage, label, items: shown.filter((i) => stageOf(i) === stage) })).filter((g) => g.items.length);
 }
-
-/** The id j or k moves to from `current`, in list order; the first item when nothing is selected. */
-export function stepFrom(order: readonly FeedbackItem[], current: string | undefined, delta: 1 | -1): string | undefined {
-  if (!order.length) {
-    return undefined;
-  }
-  const at = order.findIndex((i) => i.id === current);
-  if (at < 0) {
-    return order[0].id;
-  }
-  return order[Math.min(order.length - 1, Math.max(0, at + delta))].id;
-}

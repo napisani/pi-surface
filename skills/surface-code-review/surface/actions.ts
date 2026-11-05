@@ -4,6 +4,8 @@ import { applyPatch, type PatchOp } from "../../../src/host/patch.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
 import type { Anchor } from "../../../src/kit/code.ts";
 import type { Finding } from "../../../src/kit/findings.ts";
+import type { OpinionTarget, TargetInfo } from "../../../src/kit/opinion.ts";
+import { isOpinionAction, OPINION_ACTIONS, resolveOpinionAction, type OpinionScope } from "../../../src/kit/opinionActions.ts";
 import { Anchor as AnchorSchema, codeRefSchema } from "../../../src/kit/schemas.ts";
 import {
   addComment,
@@ -29,6 +31,7 @@ import {
   requestOf,
   sendRequests,
   type ChangeRequest,
+  opinionsPtr,
   questionOf,
   resolveQuestion as resolveQuestionThread,
   type DraftComment,
@@ -77,6 +80,7 @@ const ACTIONS = {
   "findings.request": action("findings.request", { findingIds: Ids }),
   "task.stop": action("task.stop", { task: Type.Enum(["review", "walkthrough"]) }),
   refresh: action("refresh", {}),
+  ...OPINION_ACTIONS,
 };
 
 export type PageAction = Static<(typeof ACTIONS)[keyof typeof ACTIONS]>;
@@ -386,7 +390,48 @@ function resolveRequest(state: ReviewState, action: ActionOf<`request${string}`>
  * agent when it has work, plus any GitHub call the session must make.
  * Throws SurfaceError for invalid actions.
  */
+/** What a second opinion on the review reads, and how its author revises it. */
+function opinionScope(state: ReviewState): OpinionScope<ReviewState> {
+  const info = (kind: string): TargetInfo => {
+    if (kind === "review") {
+      if (!state.review.summary) {
+        throw new SurfaceError("there is no review to check yet");
+      }
+      const findings = state.review.findings.filter((f) => !f.dismissed).map((f) => `${findingLine(f)}\n  ${f.summary.replace(/\n/g, " ")}${f.fix ? ` Fix: ${f.fix}` : ""}`);
+      return {
+        label: "the review's findings",
+        brief: {
+          content: [`the multi-valued review of ${prLine(state)} (${diffCommand(state)} in the worktree). Check each finding against the code, and look for what it missed.`, ...findings].join("\n"),
+          revise: "correct the affected findings, then republish the whole review with surface_review_findings. Findings are renumbered F1.. in the order you give them.",
+        },
+      };
+    }
+    if (kind === "walkthrough") {
+      if (!state.walkthrough.steps.length) {
+        throw new SurfaceError("there is no walkthrough to check yet");
+      }
+      const steps = state.walkthrough.steps.map((s) => `- ${s.id} ${s.title} · ${s.ref.path}:${s.ref.startLine}-${s.ref.endLine}`);
+      return {
+        label: "the walkthrough",
+        brief: { content: [`the walkthrough "${state.walkthrough.title ?? ""}" of ${prLine(state)}:`, ...steps].join("\n"), revise: "republish the corrected tour with surface_review_walkthrough." },
+      };
+    }
+    throw new SurfaceError(`a second opinion cannot target "${kind}"`);
+  };
+  return {
+    list: opinionsPtr,
+    opinions: state.opinions,
+    target: (kind, id): OpinionTarget => ({ kind, id, label: info(kind).label }),
+    brief: (t) => info(t.kind).brief,
+    tools: { findings: "surface_review_opinion", update: "surface_review_opinion_update" },
+  };
+}
+
 export function resolveAction(state: ReviewState, action: PageAction, now: string): Resolution {
+  if (isOpinionAction(action)) {
+    const { ops, message } = resolveOpinionAction(opinionScope(state), action, now);
+    return { ops, message: message ? { content: message, details: action } : undefined };
+  }
   if (inArea(action, "comment.")) {
     return resolveComment(state, action, now);
   }

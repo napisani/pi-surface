@@ -1,0 +1,6 @@
+.sides{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.sides h4{margin:4px 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.legend{display:flex;gap:12px;font:12px var(--mono);margin-bottom:6px}
+.added{color:var(--green)}
+.removed{color:var(--rose)}
+.changed{color:var(--high)}

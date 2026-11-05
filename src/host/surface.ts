@@ -1,3 +1,4 @@
+import type { Json } from "./decode.ts";
 import { applyPatch, type PatchOp } from "./patch.ts";
 import type { Runner } from "./runner.ts";
 import { startSurfaceServer, type ServedWorkflow, type SurfaceServer } from "./server.ts";
@@ -16,6 +17,10 @@ export interface SurfaceHost {
   opened?(url: string): void;
   now?(): string;
   runner: Runner;
+  /** Pi's merged settings as plain JSON. */
+  settings?(): Json;
+  /** The models Pi can run, as provider/id. */
+  models?(): string[];
 }
 
 export interface TypedRunning<S, Sess> {
@@ -55,7 +60,7 @@ export class Surface {
         this.#touched.add(definition.id);
       }
       const store = new Store<unknown>(state);
-      const session = definition.create(this.#context(definition.id, store));
+      const session = definition.create(this.#context(definition, store));
       this.workflows.set(definition.id, { definition, store, session, hasState: () => this.#touched.has(definition.id) });
     }
   }
@@ -64,18 +69,23 @@ export class Surface {
     return this.#host.now?.() ?? new Date().toISOString();
   }
 
-  #context(id: WorkflowId, store: Store<unknown>): SurfaceContext<unknown> {
+  #context(definition: AnyWorkflow, store: Store<unknown>): SurfaceContext<unknown> {
+    const id = definition.id;
+    const apply = (ops: PatchOp[], log: boolean) => {
+      if (!ops.length) {
+        return;
+      }
+      store.apply(ops);
+      if (log) {
+        this.#host.persist({ workflow: id, ops });
+      }
+      this.#touched.add(id);
+      this.#host.changed?.(id);
+    };
     return {
       store,
-      commit: (ops: PatchOp[]) => {
-        if (!ops.length) {
-          return;
-        }
-        store.apply(ops);
-        this.#host.persist({ workflow: id, ops });
-        this.#touched.add(id);
-        this.#host.changed?.(id);
-      },
+      commit: (ops: PatchOp[]) => apply(ops, definition.persistence !== "own"),
+      remember: (ops: PatchOp[]) => apply(ops, true),
       notifyAgent: (content, action) => this.#host.notifyAgent(id, content, action),
       url: async () => {
         const url = await this.url(id);
@@ -87,7 +97,26 @@ export class Surface {
       },
       now: () => this.#now(),
       runner: this.#host.runner,
+      settings: () => this.#host.settings?.() ?? {},
+      models: () => this.#host.models?.() ?? [],
     };
+  }
+
+  /** Lets workflows that persist their own state reload it; one failing does not stop the others. */
+  async restore(): Promise<{ workflow: WorkflowId; error: string }[]> {
+    const failures: { workflow: WorkflowId; error: string }[] = [];
+    for (const [id, running] of this.workflows) {
+      if (!this.#touched.has(id) || !running.session.restore) {
+        continue;
+      }
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- workflows restore one at a time so their failures stay separate
+        await running.session.restore();
+      } catch (error) {
+        failures.push({ workflow: id, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    return failures;
   }
 
   running(id: WorkflowId): Running {
@@ -120,7 +149,7 @@ export class Surface {
       this.running(id);
     }
     if (!this.#server) {
-      this.#server = startSurfaceServer({ workflows: this.workflows, webRoot: this.#webRoot });
+      this.#server = startSurfaceServer({ workflows: this.workflows, webRoot: this.#webRoot, models: () => this.#host.models?.() ?? [] });
       this.#server.catch(() => (this.#server = undefined));
     }
     const base = (await this.#server).url;

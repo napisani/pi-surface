@@ -14,6 +14,7 @@ import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Row } from "../../../../web/kit/primitives/Row.tsx";
 import { Segmented } from "../../../../web/kit/primitives/Segmented.tsx";
 import { Spacer } from "../../../../web/kit/primitives/Spacer.tsx";
+import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { Text } from "../../../../web/kit/primitives/Text.tsx";
 import sev from "../../../../web/kit/Severity.module.css";
 import { usePending } from "../../../../web/kit/store.ts";
@@ -40,6 +41,9 @@ const blocking = (s: Severity) => s === "Critical" || s === "High";
 const selectRun = (s: ReviewState) => s.review;
 const selectComments = (s: ReviewState) => s.comments;
 const selectRequests = (s: ReviewState) => s.requests;
+const selectOpinions = (s: ReviewState) => s.opinions;
+const selectReviewer = (s: ReviewState) => s.reviewer;
+const REVIEW_TARGET = { kind: "review", id: "run", label: "the review's findings" };
 
 function groupsOf(findings: readonly Finding[], by: GroupBy): Group[] {
   if (by === "severity") {
@@ -116,6 +120,8 @@ export function FindingList({ active, onOpen }: { active: string | undefined; on
   const run = useReview(selectRun);
   const comments = useReview(selectComments);
   const requests = useReview(selectRequests);
+  const opinions = useReview(selectOpinions);
+  const reviewer = useReview(selectReviewer);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [showDismissed, setShowDismissed] = useState(false);
   const [hideFixed, setHideFixed] = useState(false);
@@ -259,6 +265,7 @@ export function FindingList({ active, onOpen }: { active: string | undefined; on
         );
       })}
       {run.status === "done" && run.findings.length === 0 ? <EmptyState small title="No issues found." /> : null}
+      {run.summary && run.status !== "running" ? <SecondOpinion target={REVIEW_TARGET} opinions={opinions} defaults={reviewer} /> : null}
       {run.disagreements.length ? (
         <details className={css.details}>
           <summary>Disagreements ({run.disagreements.length})</summary>

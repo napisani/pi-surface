@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { usePending } from "../store.ts";
+import type { RefObject } from "react";
+import { useDraft, usePending } from "../store.ts";
 import { Button } from "./Button.tsx";
 import css from "./AskRow.module.css";
 import { Row } from "./Row.tsx";
@@ -10,22 +10,23 @@ export interface AskRowProps {
   pendingKey: string;
   label?: string;
   initial?: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
   onSend: (text: string) => Promise<boolean>;
 }
 
 /** A one-line input and button, for questions, follow-ups and instructions. Clears on success. */
-export function AskRow({ placeholder, pendingKey, label = "Ask", initial = "", onSend }: AskRowProps) {
-  const [text, setText] = useState(initial);
+export function AskRow({ placeholder, pendingKey, label = "Ask", initial = "", onSend, inputRef }: AskRowProps) {
+  const [text, setText] = useDraft(`ask:${pendingKey}`, initial);
   const busy = usePending(pendingKey);
   const send = async () => {
     const trimmed = text.trim();
-    if (trimmed && (await onSend(trimmed))) {
+    if (!busy && trimmed && (await onSend(trimmed))) {
       setText("");
     }
   };
   return (
     <Row className={css.ask}>
-      <input placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void send()} />
+      <input ref={inputRef} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && !e.repeat && void send()} />
       <Button disabled={busy} onClick={() => void send()}>
         {label}
       </Button>

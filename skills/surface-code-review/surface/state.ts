@@ -7,6 +7,7 @@ import { availableRevs, type PrFile, type PrInfo, type Revisions } from "../../.
 import * as drafts from "../../../src/kit/github-draft.ts";
 import type { GitHubDraft, PostResult } from "../../../src/kit/github-draft.ts";
 import { LEVELS } from "../../../src/kit/levels.ts";
+import type { Opinion, ReviewerDefaults } from "../../../src/kit/opinion.ts";
 import * as rounds from "../../../src/kit/rounds.ts";
 import type { RoundUpdate, RoundWork } from "../../../src/kit/rounds.ts";
 import * as tasks from "../../../src/kit/task.ts";
@@ -119,6 +120,9 @@ export interface ReviewState {
   nextRequestId: number;
   nextQuestionId: number;
   requestRound: number;
+  /** Second opinions on the review's findings and the walkthrough. */
+  opinions: Opinion[];
+  reviewer: ReviewerDefaults;
 }
 
 export type TaskKind = "review" | "walkthrough";
@@ -139,10 +143,13 @@ export function emptyState(): ReviewState {
     nextRequestId: 1,
     nextQuestionId: 1,
     requestRound: 0,
+    opinions: [],
+    reviewer: { model: null, prompts: [] },
   };
 }
 
 const r = at<ReviewState>();
+export const opinionsPtr = r("opinions");
 const MAX_BODY = 20_000;
 
 /** The revisions the page can read: the merge base, the head, and in a live review the working tree. */
@@ -246,6 +253,7 @@ export function loadReview(state: ReviewState, target: Target, pr: ReviewPr | nu
     replace(r("review"), fresh.review),
     replace(r("walkthrough"), fresh.walkthrough),
     replace(r("questions"), fresh.questions),
+    replace(r("opinions"), fresh.opinions),
   );
   return ops;
 }

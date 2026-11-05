@@ -1,10 +1,13 @@
 // The code review page: Files, Review, Walkthrough, Requests and Comments tabs.
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { Activity, useMemo, useRef, type ReactNode } from "react";
+import { KeyboardScope } from "../../../../web/kit/KeyboardScope.tsx";
+import { useCommands } from "../../../../web/kit/keyboardContext.ts";
 import { ErrorBoundary } from "../../../../web/kit/ErrorBoundary.tsx";
 import type { LineItemRef } from "../../../../web/kit/diffItems.ts";
 import { setHashValues, useHashChoice } from "../../../../web/kit/hooks/useHashState.ts";
 import { useJumpTo, type JumpTarget } from "../../../../web/kit/hooks/useJumpTo.ts";
+import { usePatches } from "../../../../web/kit/hooks/usePatches.ts";
 import { Markdown } from "../../../../web/kit/Markdown.tsx";
 import { PageHeader, tabCount, type HeaderTab } from "../../../../web/kit/PageHeader.tsx";
 import { Badge } from "../../../../web/kit/primitives/Badge.tsx";
@@ -17,7 +20,7 @@ import type { ReviewState } from "../state.ts";
 import { CommentsTab } from "./CommentsTab.tsx";
 import { FilesTab } from "./FilesTab.tsx";
 import { usePost, useReadReview, useReview } from "./hooks.ts";
-import { noteCounts, visibleFiles } from "./lineItems.ts";
+import { changeOf, noteCounts, visibleFiles } from "./lineItems.ts";
 import { NavContext, type ReviewNav } from "./nav.ts";
 import css from "./ReviewPage.module.css";
 import { RequestsTab } from "./RequestsTab.tsx";
@@ -78,7 +81,7 @@ function Title({ state }: { state: ReviewState }) {
 function TabPanel({ name, visible, children }: { name: string; visible: boolean; children: ReactNode }) {
   return (
     <Activity mode={visible ? "visible" : "hidden"}>
-      <ErrorBoundary name={name}>{children}</ErrorBoundary>
+      <KeyboardScope name={name} active={visible}><ErrorBoundary name={name}>{children}</ErrorBoundary></KeyboardScope>
     </Activity>
   );
 }
@@ -94,6 +97,7 @@ export function ReviewPage() {
   const viewer = useRef<CodeViewHandle<LineItemRef, undefined>>(null);
   const jumpLines = useJumpTo(viewer);
   const [viewed, setViewed] = useViewed();
+  const patches = usePatches();
 
   const nav = useMemo<ReviewNav>(
     () => ({
@@ -104,8 +108,15 @@ export function ReviewPage() {
           return;
         }
         const filters = filterStore.get();
-        if (!visibleFiles(current, filters, viewed, noteCounts(current)).includes(file)) {
-          filterStore.set({ text: "", categories: new Set([...filters.categories, file.category]), onlyNoted: false, hideViewed: false });
+        if (!visibleFiles(current, filters, viewed, noteCounts(current), patches).includes(file)) {
+          filterStore.set({
+            text: "",
+            categories: new Set([...filters.categories, file.category]),
+            changes: new Set([...filters.changes, changeOf(file)]),
+            token: "",
+            onlyNoted: false,
+            hideViewed: false,
+          });
         }
         collapsedStore.update((prev) => (prev.has(file.path) ? new Set([...prev].filter((p) => p !== file.path)) : prev));
         if (viewed.has(file.path)) {
@@ -118,9 +129,13 @@ export function ReviewPage() {
         setHashValues({ tab: "review", finding: id });
       },
     }),
-    [readState, viewed, setViewed, jumpLines],
+    [readState, viewed, setViewed, jumpLines, patches],
   );
 
+  useCommands([
+    { id: "review.refresh", label: "Refresh review", keys: ["<leader>e"], disabled: refreshing ? "Refreshing" : undefined, run: () => { void post({ type: "refresh" }, "refresh"); } },
+    { id: "review.changes", label: "Open changes", keys: ["<leader>co"], run: () => setTab("files") },
+  ]);
   const target = state.target!;
   const refreshTip = target.mode === "live" ? `Reload the diff from your working tree${state.pr ? " and GitHub's comments" : ""}` : "Load new GitHub comments and check for new commits";
   return (
@@ -155,7 +170,7 @@ export function ReviewPage() {
         {/* CodeView builds its viewer in a callback ref, so the Files tab is hidden with CSS rather than an Activity. */}
         <section hidden={tab !== "files"}>
           <ErrorBoundary name="files">
-            <FilesTab viewer={viewer} />
+            <KeyboardScope name="files" active={tab === "files"}><FilesTab viewer={viewer} /></KeyboardScope>
           </ErrorBoundary>
         </section>
         <TabPanel name="review" visible={tab === "review"}>

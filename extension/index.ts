@@ -10,12 +10,13 @@ import { MESSAGE_TYPE, messageOf, OPS_ENTRY, SurfaceError, type AnyWorkflow, typ
 import forge from "../skills/surface-forge-solution/surface/workflow.ts";
 import review from "../skills/surface-code-review/surface/workflow.ts";
 import feedback from "../skills/surface-pr-feedback/surface/workflow.ts";
+import plan from "../skills/surface-plan-large-change/surface/workflow.ts";
 import { browserArgv, configuredBrowser, defaultBrowser, type BrowserCommand } from "./browser.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_ROOT = join(ROOT, "web");
 
-export const WORKFLOWS: AnyWorkflow[] = [forge, review, feedback];
+export const WORKFLOWS: AnyWorkflow[] = [forge, review, feedback, plan];
 const URL_WIDGET = "surface:url";
 
 /** Registers pi-surface with the given workflows; tests pass their own. */
@@ -28,13 +29,15 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
   // The workflow last opened or changed, which /surface open shows.
   let current: WorkflowId | undefined;
   const activated = new Set<WorkflowId>();
+  // A JSON round trip turns Pi's typed settings into plain JSON for decoding, keeping keys Pi does not know.
+  const settings = (): Json => JSON.parse(JSON.stringify(pi.getSettings()));
+  let models = (): string[] => [];
 
   /** Opens url with the surface.browser setting, read on each open so /reload applies it. */
   const openBrowser = async (url: string) => {
     let browser: BrowserCommand | undefined;
     try {
-      // A JSON round trip turns Pi's typed settings into plain JSON for decoding, keeping keys Pi does not know.
-      browser = configuredBrowser(JSON.parse(JSON.stringify(pi.getSettings())));
+      browser = configuredBrowser(settings());
     } catch (error) {
       ui?.notify(`surface: the surface.browser setting is invalid (${messageOf(error)}); using the default browser`, "warning");
     }
@@ -95,6 +98,7 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
     await surface?.close();
     ui = ctx.ui;
     hasUI = ctx.mode === "tui";
+    models = () => ctx.modelRegistry.getAvailable().map((m) => `${m.provider}/${m.id}`);
     stopped = false;
     current = undefined;
     activated.clear();
@@ -124,11 +128,16 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
           }
         },
         runner: spawnRunner,
+        settings,
+        models: () => models(),
       },
       workflows,
       WEB_ROOT,
       entries,
     );
+    for (const failure of await surface.restore()) {
+      ui.notify(`surface: could not reload ${failure.workflow}: ${failure.error}`, "warning");
+    }
     // Entries are in session order, so the last one names the workflow used last.
     current = entries.findLast((entry) => surface!.hasState(entry.workflow))?.workflow;
     for (const workflow of workflows) {
@@ -164,7 +173,7 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
         promptSnippet: tool.promptSnippet,
         parameters: tool.parameters,
         executionMode: "sequential",
-        defaultActive: tool.opens === true,
+        defaultActive: tool.opens === true || tool.always === true,
         async execute(_id, params) {
           if (tool.opens) {
             activate(workflow);

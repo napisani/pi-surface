@@ -1,19 +1,14 @@
 import { Type } from "typebox";
 import { defineSurfaceTool, defineWorkflow } from "../../../src/host/workflow.ts";
-import { LensVisual } from "../../../src/kit/schemas.ts";
+import { opinionTools } from "../../../src/kit/opinionTools.ts";
+import { Dimension, Lens, OptionFields as KitOptionFields } from "../../../src/kit/schemas.ts";
 import { parseAction, type ForgeAction } from "./actions.ts";
 import { ForgeSession } from "./session.ts";
 import { emptyState, type ForgeState } from "./state.ts";
 
-const LensKind = Type.Union(["callTree", "diff", "code", "mermaid", "data", "query"].map((k) => Type.Literal(k)));
-const Score = Type.Object({ value: Type.Integer({ minimum: 1, maximum: 5 }), why: Type.String() });
 const Impact = Type.Object({ kind: Type.Union([Type.Literal("add"), Type.Literal("change"), Type.Literal("new"), Type.Literal("warn")]), text: Type.String() });
 const OptionFields = {
-  description: Type.String({ maxLength: 280, description: "One or two plain sentences, at most 280 characters: what changes and what it costs. No undefined jargon, flag names, or file names." }),
-  pros: Type.Array(Type.String({ maxLength: 100 }), { minItems: 1, description: "One short phrase (at most 100 characters) per advantage over the other options." }),
-  cons: Type.Array(Type.String({ maxLength: 100 }), { minItems: 1, description: "One short phrase (at most 100 characters) per cost or risk relative to the other options." }),
-  visuals: Type.Record(Type.String(), LensVisual, { description: "One entry per lens id." }),
-  scores: Type.Record(Type.String(), Score, { description: "One entry per dimension id; 1-5, relative to the other options, 5 = best." }),
+  ...KitOptionFields,
   impact: Type.Optional(Type.Array(Impact, { description: "How the spec changes, one plain line each: sections added or changed, questions unlocked, new obligations. The Overview tab lists these for decided questions." })),
   specDelta: Type.Optional(
     Type.Record(Type.String(), Type.Integer({ minimum: -3, maximum: 3 }), {
@@ -26,10 +21,10 @@ const Question = Type.Object({
   header: Type.String({ description: "Short decision tag." }),
   title: Type.String({ description: "The question, phrased so each option is a direct answer. Plain words; define any term the user has not seen." }),
   prerequisites: Type.Optional(Type.Array(Type.String({ description: "Decision ids this depends on." }))),
-  lenses: Type.Array(Type.Object({ id: Type.String(), label: Type.String(), kind: LensKind }), {
+  lenses: Type.Array(Lens, {
     description: "2-4 views that make this decision clear: diff for code, mermaid ER plus data/query for data models, sequence for interactions.",
   }),
-  dimensions: Type.Array(Type.Object({ id: Type.String(), label: Type.String(), hint: Type.Optional(Type.String()) }), { description: "What this decision actually trades between." }),
+  dimensions: Type.Array(Dimension, { description: "What this decision actually trades between." }),
   options: Type.Array(Type.Object({ id: Type.String(), label: Type.String(), recommended: Type.Optional(Type.Boolean()), ...OptionFields })),
 });
 
@@ -126,6 +121,6 @@ export default defineWorkflow<ForgeState, ForgeAction, ForgeSession>({
   title: "forge",
   emptyState: () => emptyState(),
   parseAction,
-  tools: [ask, reply, rfc, draft],
+  tools: [ask, reply, rfc, draft, ...opinionTools<ForgeSession>("forge")],
   create: (ctx) => new ForgeSession(ctx),
 });

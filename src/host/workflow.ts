@@ -23,14 +23,20 @@ export interface SurfaceAction {
 
 export interface SurfaceContext<S> {
   readonly store: Store<S>;
-  /** Applies, persists and broadcasts the ops. */
+  /** Applies and broadcasts the ops, and persists them to the session log unless the workflow persists its own state. */
   commit(ops: PatchOp[]): void;
+  /** Applies, broadcasts and always logs the ops: for a workflow that persists its own state, the few ops resume needs. */
+  remember(ops: PatchOp[]): void;
   /** Wakes the agent; the host prefixes the content with "Surface · <id> · ". The action rides along as the message's details. */
   notifyAgent(content: string, action: SurfaceAction): void;
   /** This workflow's page URL. Starts the server, and opens the browser the first time. */
   url(): Promise<string>;
   now(): string;
   runner: Runner;
+  /** Pi's merged settings as plain JSON, read fresh on each call. */
+  settings(): Json;
+  /** The models Pi can run, as provider/id. */
+  models(): string[];
 }
 
 export interface WorkflowSession<A> {
@@ -39,6 +45,8 @@ export interface WorkflowSession<A> {
   routes?: Record<string, (query: URLSearchParams) => Promise<string>>;
   /** The status line text, or undefined to show none. */
   status?(): string | undefined;
+  /** Reloads state the workflow persists itself, after the session log replays. */
+  restore?(): Promise<void>;
   close?(): Promise<void>;
 }
 
@@ -56,6 +64,8 @@ export interface SurfaceTool<Sess> {
   parameters: TSchema;
   /** The workflow's opening tool: always declared, and running it switches the others on. */
   opens?: true;
+  /** Declared in every session from the start, without opening the workflow, e.g. a report another session sends in. */
+  always?: true;
   run(session: Sess, params: Json): ToolOutcome | Promise<ToolOutcome>;
 }
 
@@ -75,6 +85,8 @@ export interface WorkflowDefinition<S, A, Sess extends WorkflowSession<A>> {
   parseAction(body: Json): A;
   tools: SurfaceTool<Sess>[];
   create(ctx: SurfaceContext<S>): Sess;
+  /** "own": the workflow saves its state itself and logs only what remember() is given. Defaults to "log". */
+  persistence?: "log" | "own";
 }
 
 // The host runs workflows of unrelated state and action types side by side and never reads S or A.

@@ -1,0 +1,10 @@
+.layout{display:flex;flex-direction:column;gap:12px}
+.card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:10px 12px;display:flex;flex-direction:column;gap:6px;scroll-margin-top:calc(var(--head) + 16px)}
+.head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.head select{margin-left:auto}
+.id{font-family:var(--mono);color:var(--amber)}
+.title{font-weight:600;color:var(--ink)}
+.deliverable{font-size:13px}
+.acceptance{margin:0;padding-left:18px;font-size:12.5px;color:var(--dim)}
+.ref{background:none;border:1px solid var(--line);border-radius:6px;color:var(--amber-ink);font:11px var(--mono);cursor:pointer}
+.deviation{display:block;margin-top:2px}

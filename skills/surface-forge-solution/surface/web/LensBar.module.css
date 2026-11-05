@@ -4,4 +4,3 @@
 .lens:hover{color:var(--ink)}
 .on{background:var(--panel2);border-color:var(--hover-line);color:var(--ink)}
 .kind{font-family:var(--mono);font-size:10px;color:var(--faint)}
-.lens kbd{font-family:var(--mono);font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:3px;padding:0 4px}

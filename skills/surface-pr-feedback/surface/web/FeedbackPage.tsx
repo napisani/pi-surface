@@ -1,5 +1,7 @@
 // The PR feedback page: Feedback, Changes, Commits and Replies tabs.
 import { Activity, useMemo, type ReactNode } from "react";
+import { KeyboardScope } from "../../../../web/kit/KeyboardScope.tsx";
+import { useCommands } from "../../../../web/kit/keyboardContext.ts";
 import { ErrorBoundary } from "../../../../web/kit/ErrorBoundary.tsx";
 import { useHashChoice } from "../../../../web/kit/hooks/useHashState.ts";
 import { Markdown } from "../../../../web/kit/Markdown.tsx";
@@ -67,7 +69,7 @@ function Title({ state }: { state: FeedbackState }) {
 function TabPanel({ name, visible, children }: { name: string; visible: boolean; children: ReactNode }) {
   return (
     <Activity mode={visible ? "visible" : "hidden"}>
-      <ErrorBoundary name={name}>{children}</ErrorBoundary>
+      <KeyboardScope name={name} active={visible}><ErrorBoundary name={name}>{children}</ErrorBoundary></KeyboardScope>
     </Activity>
   );
 }
@@ -78,6 +80,10 @@ export function FeedbackPage() {
   const refreshing = usePending("refresh");
   const tabs = useMemo(() => tabsOf(state), [state]);
   const [tab, setTab] = useHashChoice<Tab>("tab", "feedback", TABS);
+  useCommands([
+    { id: "feedback.refresh", label: "Refresh feedback", keys: ["<leader>e"], disabled: refreshing ? "Refreshing" : undefined, run: () => { void post({ type: "refresh" }, "refresh"); } },
+    { id: "feedback.changes", label: "Open changes", keys: ["<leader>co"], run: () => setTab("changes") },
+  ]);
   const { target, pr } = state;
   return (
     <>
@@ -114,7 +120,7 @@ export function FeedbackPage() {
         {/* CodeView builds its viewer in a callback ref, so the Changes tab is hidden with CSS rather than an Activity. */}
         <section hidden={tab !== "changes"}>
           <ErrorBoundary name="changes">
-            <ChangesTab />
+            <KeyboardScope name="changes" active={tab === "changes"}><ChangesTab /></KeyboardScope>
           </ErrorBoundary>
         </section>
         <TabPanel name="commits" visible={tab === "commits"}>

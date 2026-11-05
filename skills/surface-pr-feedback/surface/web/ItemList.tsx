@@ -5,7 +5,6 @@ import { Checkbox } from "../../../../web/kit/primitives/Checkbox.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Segmented } from "../../../../web/kit/primitives/Segmented.tsx";
-import { Text } from "../../../../web/kit/primitives/Text.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { TaskBanner } from "../../../../web/kit/TaskBanner.tsx";
 import type { FeedbackItem, FeedbackState } from "../state.ts";
@@ -95,9 +94,6 @@ export function ItemList({ groups, active, filter, onFilter }: ItemListProps) {
             Show {hidden} hidden
           </Checkbox>
         ) : null}
-        <Text tone="faint" small>
-          j / k to move
-        </Text>
       </div>
       <div className={css.decisions}>
         <Segmented options={DECISION_FILTERS} value={filter.decision} onChange={(decision) => onFilter({ ...filter, decision })} />

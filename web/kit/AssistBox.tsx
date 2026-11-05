@@ -21,7 +21,7 @@ export function AssistBox({ asks, placeholder, onSend, onClose }: { asks: readon
         ))}
       </div>
       <Row>
-        <input className={css.input} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(text)} />
+        <input className={css.input} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && !e.repeat && send(text)} />
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={() => send(text)}>
           Ask agent

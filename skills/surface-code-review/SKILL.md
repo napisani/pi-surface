@@ -57,6 +57,8 @@ Each request arrives as a message starting `Surface · review ·` with the revie
 | question about Fn | Answer from the code, not from memory of the review. Add a visual (same vocabulary as findings) when structure explains it better than prose. | `surface_review_finding_reply` |
 | question Qn about some lines, a step, or the change | Read the referenced lines and what they touch, then answer the latest question in two to five sentences. Earlier messages are context. Add a visual when it helps. | `surface_review_question_reply` |
 | generate a walkthrough | Write the tour per [references/walkthrough.md](references/walkthrough.md). | `surface_review_walkthrough` |
+| second opinion On on the review or walkthrough | Run the review as a read-only subagent on the named model with the given prompt; publish its findings unchanged. Do not act on them; the user triages first. | `surface_review_opinion` |
+| second opinion On · corrections | You are the author: correct the review or walkthrough for each accepted finding and republish it, then report done or declined per finding with the text before and after. | `surface_review_findings` or `surface_review_walkthrough`, then `surface_review_opinion_update` |
 
 When the user says in chat that a PR has new commits, update a pinned worktree (step 2) and call `surface_review_open` again. Live reviews pick up edits when the user clicks Refresh or when you report a request round. Reopening the same review keeps everything on the page.
 

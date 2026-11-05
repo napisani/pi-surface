@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import type { ServerEvent } from "../../src/host/server.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { PageHeader } from "./PageHeader.tsx";
+import { KeyboardProvider } from "./KeyboardProvider.tsx";
 import { EmptyState } from "./primitives/EmptyState.tsx";
 import css from "./shell.module.css";
 import { createStore, fetchPost, PageStatus, SurfaceProvider, type PageStore } from "./store.ts";
@@ -75,7 +76,7 @@ export function mountWorkflow<S>(mount: WorkflowMount<S>): void {
   createRoot(document.getElementById("app")!).render(
     <SurfaceProvider store={store} status={status} post={fetchPost(status, toast)}>
       <ErrorBoundary name="page">
-        <Shell store={store} mount={mount} />
+        <KeyboardProvider><Shell store={store} mount={mount} /></KeyboardProvider>
       </ErrorBoundary>
       <Toaster />
     </SurfaceProvider>,

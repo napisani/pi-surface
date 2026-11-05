@@ -1,8 +1,9 @@
 // A guided tour: an ordered step list beside the current step, its code and visual.
-import type { KeyboardEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { TourStep } from "../../src/kit/tour.ts";
 import { CodeRef, type CodeRefProps } from "./CodeRef.tsx";
 import { cx } from "./cx.ts";
+import { useCommands, useKeyboard } from "./keyboardContext.ts";
 import { Markdown } from "./Markdown.tsx";
 import { Button } from "./primitives/Button.tsx";
 import { Row } from "./primitives/Row.tsx";
@@ -22,16 +23,15 @@ export interface TourProps {
 
 export function Tour({ steps, index, go, extras, refProps }: TourProps) {
   const step = steps[index];
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === "ArrowRight" || e.key === "j") {
-      go(index + 1);
-    }
-    if (e.key === "ArrowLeft" || e.key === "k") {
-      go(index - 1);
-    }
-  };
+  const keyboard = useKeyboard();
+  useCommands([
+    { id: "tour.next", label: "Next walkthrough step", keys: ["]s"], disabled: index >= steps.length - 1 ? "Last step" : undefined, run: () => go(index + 1) },
+    { id: "tour.previous", label: "Previous walkthrough step", keys: ["[s"], disabled: index <= 0 ? "First step" : undefined, run: () => go(index - 1) },
+    { id: "tour.find", label: "Find a walkthrough step", keys: ["<leader>fs"], run: () => keyboard?.pick("Walkthrough steps", steps.map((item, at) => ({ id: item.id, label: item.title, detail: item.ref.path, run: () => go(at) }))) },
+    { id: "tour.code", label: "Open step in diff", keys: ["gf"], disabled: refProps?.onOpen ? undefined : "Code is outside this diff", run: () => refProps?.onOpen?.() },
+  ]);
   return (
-    <div className={css.layout} tabIndex={0} onKeyDown={onKey}>
+    <div className={css.layout}>
       <ol className={css.steps}>
         {steps.map((s, i) => (
           <li key={s.id}>

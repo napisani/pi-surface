@@ -1,9 +1,9 @@
 // The Questions view: one design decision at a time. Options compared by a
 // chosen lens, their trade-offs and effect on the spec, follow-ups, and the answer.
 import { useState } from "react";
+import { useCommands, useKeyboard } from "../../../../web/kit/keyboardContext.ts";
 import { cx } from "../../../../web/kit/cx.ts";
 import { DeltaBars } from "../../../../web/kit/DeltaBars.tsx";
-import { useGlobalKey } from "../../../../web/kit/hooks/useGlobalKey.ts";
 import { useHashState } from "../../../../web/kit/hooks/useHashState.ts";
 import { ImpactList } from "../../../../web/kit/ImpactList.tsx";
 import { OPTION_COLORS, OptionCard } from "../../../../web/kit/OptionCard.tsx";
@@ -12,6 +12,7 @@ import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Sub } from "../../../../web/kit/primitives/Sub.tsx";
+import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { specDimensionsOf, type Decision, type ForgeState, type Question } from "../state.ts";
 import { FollowUps } from "./FollowUps.tsx";
@@ -109,13 +110,12 @@ export function QuestionsView() {
   const q = questions.find((x) => x.id === qParam) ?? questions.find((x) => x.status === "open") ?? questions.at(-1);
   const answering = usePending(q ? `answer:${q.id}` : "");
 
-  useGlobalKey((event) => {
-    const lens = q?.lenses[Number(event.key) - 1];
-    if (q && lens) {
-      setLensOf((prev) => ({ ...prev, [q.id]: lens.id }));
-    }
-  });
-
+  const keyboard = useKeyboard();
+  useCommands([
+    { id: "forge.questions", label: "Find a question", keys: ["<leader>fq"], run: () => keyboard?.pick("Questions", questions.map((question) => ({ id: question.id, label: question.title, detail: question.status, run: () => openQuestion(question.id) }))) },
+    { id: "forge.options", label: "Pick an option", keys: ["<leader>fo"], disabled: q?.status === "open" ? undefined : "Question is settled", run: () => keyboard?.pick("Options — select without submitting", (q?.options ?? []).map((option) => ({ id: option.id, label: option.label, run: () => { if (q) { setSelectedOf((prev) => ({ ...prev, [q.id]: option.id })); } } }))) },
+    { id: "forge.lenses", label: "Pick a comparison lens", keys: ["<leader>fv"], run: () => keyboard?.pick("Comparison lenses", (q?.lenses ?? []).map((lens) => ({ id: lens.id, label: lens.label, run: () => { if (q) { setLensOf((prev) => ({ ...prev, [q.id]: lens.id })); } } }))) },
+  ]);
   if (!q) {
     return <EmptyState title="Waiting for the agent to post a question…">Questions show up here when the agent posts them.</EmptyState>;
   }
@@ -190,6 +190,7 @@ export function QuestionsView() {
             <ImpactList items={selected.impact} />
           </Panel>
           <FollowUps question={q} selectedId={selectedId} />
+          <SecondOpinion target={{ kind: "question", id: q.id, label: `${q.id} ${q.header}` }} opinions={state.opinions} defaults={state.reviewer} />
         </div>
       </div>
     </>

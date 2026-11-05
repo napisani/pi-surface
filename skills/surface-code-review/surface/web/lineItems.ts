@@ -1,9 +1,10 @@
 // Which items sit on which diff lines of the review's Files tab. Pure, so the
 // Node tests cover it; FilesTab keeps the result stable with stableLineItems.
-import type { DiffLineAnnotation } from "@pierre/diffs";
+import type { DiffLineAnnotation, FileDiffMetadata } from "@pierre/diffs";
 import { sideOf, type Anchor, type Rev, type Side } from "../../../../src/kit/code.ts";
 import type { Category, PrFile } from "../../../../src/kit/git.ts";
 import { lineAnnotation, stableLineItems, type LineItemMap, type LineItemRef } from "../../../../web/kit/diffItems.ts";
+import { changesInclude } from "../../../../web/kit/diffSearch.ts";
 import type { ChangeRequest, RemoteComment, ReviewState } from "../state.ts";
 
 export type Mode = "live" | "pinned";
@@ -18,16 +19,36 @@ export function sideRev(mode: Mode, side: Side): Rev {
 
 export const where = (a: Anchor) => `${a.path}:${a.startLine ? `${a.startLine}–` : ""}${a.line}${a.side === "LEFT" ? " (old)" : ""}`;
 
+/** The change filter's groups; git's renames count as modified and copies as added. */
+export type ChangeKind = "modified" | "added" | "deleted";
+
+export function changeOf(file: PrFile): ChangeKind {
+  switch (file.status) {
+    case "added":
+    case "copied":
+      return "added";
+    case "deleted":
+      return "deleted";
+    case "modified":
+    case "renamed":
+      return "modified";
+  }
+}
+
 export interface FileFilters {
   text: string;
   categories: ReadonlySet<Category>;
+  changes: ReadonlySet<ChangeKind>;
+  /** Only files whose added or removed lines hold this token; empty for any. */
+  token: string;
   /** Only files with a comment, request, question or finding. */
   onlyNoted: boolean;
   hideViewed: boolean;
 }
 
 export const ALL_CATEGORIES: readonly Category[] = ["impl", "test", "docs", "config"];
-export const NO_FILTERS: FileFilters = { text: "", categories: new Set(ALL_CATEGORIES), onlyNoted: false, hideViewed: false };
+export const ALL_CHANGES: readonly ChangeKind[] = ["modified", "added", "deleted"];
+export const NO_FILTERS: FileFilters = { text: "", categories: new Set(ALL_CATEGORIES), changes: new Set(ALL_CHANGES), token: "", onlyNoted: false, hideViewed: false };
 
 /** Comments, open requests and open questions on each path. */
 export function noteCounts(state: ReviewState): Map<string, number> {
@@ -54,16 +75,29 @@ export function noteCounts(state: ReviewState): Map<string, number> {
   return counts;
 }
 
-export function visibleFiles(state: ReviewState, filters: FileFilters, viewed: ReadonlySet<string>, notes: ReadonlyMap<string, number>): PrFile[] {
+/** Files that pass the filters. The token filter waits for patches; until they load it passes every file. */
+export function visibleFiles(
+  state: ReviewState,
+  filters: FileFilters,
+  viewed: ReadonlySet<string>,
+  notes: ReadonlyMap<string, number>,
+  patches?: ReadonlyMap<string, FileDiffMetadata>,
+): PrFile[] {
   const needle = filters.text.trim().toLowerCase();
   const withFindings = new Set(state.review.findings.filter((f) => !f.dismissed).map((f) => f.primary.path));
   return state.files.filter(
     (f) =>
       filters.categories.has(f.category) &&
+      filters.changes.has(changeOf(f)) &&
+      (!filters.token || !patches || hasTokenChange(patches.get(f.path), filters.token)) &&
       (!needle || f.path.toLowerCase().includes(needle) || Boolean(f.previousPath?.toLowerCase().includes(needle))) &&
       (!filters.onlyNoted || Boolean(notes.get(f.path)) || withFindings.has(f.path)) &&
       (!filters.hideViewed || !viewed.has(f.path)),
   );
+}
+
+function hasTokenChange(file: FileDiffMetadata | undefined, token: string): boolean {
+  return file !== undefined && changesInclude(file, token);
 }
 
 export interface Composer {

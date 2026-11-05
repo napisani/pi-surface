@@ -114,6 +114,9 @@ Give each finding the 1–3 views that make the issue obvious to someone who has
 | Who calls what; where ownership or a seam sits | `callTree` |
 | State that can go invalid | `mermaid` stateDiagram with the bad transition |
 | A simpler or safer shape | `code` with `+`/`-` lines, or `diff` |
+| Callers, modules or components and how they connect | `graph`, or `archDiff` for before and after |
+| Cases or options measured against criteria | `matrix`, cells toned `good` or `bad` |
+| State that can go invalid, step by step | `stateMachine`, with the bad transition marked |
 
 Rules every visual follows:
 

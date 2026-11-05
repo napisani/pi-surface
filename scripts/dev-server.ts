@@ -8,7 +8,9 @@
 //   DEV_WORKFLOW=feedback DEV_MODE=chat node scripts/dev-server.ts  # local work, feedback from chat
 //   DEV_WORKFLOW=forge node scripts/dev-server.ts             # a design session with a draft
 /* oxlint-disable no-console -- a dev tool whose output is its console log */
-import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnRunner } from "../src/host/runner.ts";
@@ -24,6 +26,9 @@ import type { PageAction as FeedbackAction } from "../skills/surface-pr-feedback
 import type { AnalysisInput } from "../skills/surface-pr-feedback/surface/state.ts";
 import * as feedbackFixtures from "../skills/surface-pr-feedback/surface/test/fixtures.ts";
 import feedbackWorkflow from "../skills/surface-pr-feedback/surface/workflow.ts";
+import type { PlanAction } from "../skills/surface-plan-large-change/surface/actions.ts";
+import { choice } from "../skills/surface-plan-large-change/surface/test/fixtures.ts";
+import planWorkflow from "../skills/surface-plan-large-change/surface/workflow.ts";
 
 const workflowId = process.env.DEV_WORKFLOW ?? "review";
 const mode = process.env.DEV_MODE ?? (workflowId === "feedback" ? "pr" : "local");
@@ -31,7 +36,10 @@ const WORKFLOWS = new Map<string, AnyWorkflow>([
   ["forge", forgeWorkflow],
   ["review", reviewWorkflow],
   ["feedback", feedbackWorkflow],
+  ["plan", planWorkflow],
 ]);
+// Plans are written under a throwaway root so the dev server never touches ~/Work.
+const plansRoot = mkdtempSync(join(tmpdir(), "surface-dev-plans-"));
 const workflow = WORKFLOWS.get(workflowId);
 if (!workflow) {
   throw new Error(`DEV_WORKFLOW must be one of ${[...WORKFLOWS.keys()].join(", ")}`);
@@ -53,6 +61,8 @@ const surface = new Surface(
       agent(action);
     },
     runner: spawnRunner,
+    settings: () => ({ surface: { plans: { root: plansRoot } } }),
+    models: () => ["openai-codex/gpt-6-luna", "openai-codex/gpt-5.5", "claude-bridge/claude-sonnet-5-5"],
   },
   [workflow],
   fileURLToPath(new URL("../web", import.meta.url)),
@@ -246,7 +256,76 @@ async function startForge(): Promise<string> {
   return url;
 }
 
+async function startPlan(): Promise<string> {
+  const worktree = mkdtempSync(join(tmpdir(), "surface-dev-repo-"));
+  execFileSync("git", ["init", "-q", worktree]);
+  const plan = surface.typed(planWorkflow).session;
+  const { url } = await plan.open({ worktree, title: "Usage metering v2", slug: "metering-v2", destination: "Every API request is metered per tenant, billed from one source of truth, with a backfill of the last 90 days." });
+  plan.map({
+    outOfScope: ["Changing prices", "Invoices UI"],
+    fog: { add: ["How invoices reconcile against old usage", "Who owns the billing export once it moves"] },
+    nodes: [
+      { type: "discuss", title: "Where does metering run?", summary: "Edge workers see every request; the API knows the tenant." },
+      { type: "research", title: "What does the billing provider's usage API accept?" },
+      { type: "spike", title: "Can the event pipeline take 4k events a second?", blockedBy: ["N1"] },
+      { type: "discuss", title: "How is usage stored for the backfill?", blockedBy: ["N1", "N2"] },
+      { type: "task", title: "Can we read 90 days of production usage?", checklist: ["Request read access to the usage replica", "Confirm retention covers 90 days"] },
+    ],
+  });
+  plan.ask("N1", choice());
+  plan.node("N2", { run: { status: "running", note: "reading the provider docs", runIds: ["run-12"] } });
+  plan.node("N1", {
+    visuals: [
+      { kind: "stateMachine", label: "Request lifecycle", states: [{ id: "in", label: "received", initial: true }, { id: "auth", label: "authorized" }, { id: "metered", label: "metered", final: true }, { id: "lost", label: "unmetered", bad: true }], transitions: [{ from: "in", to: "auth", event: "auth ok" }, { from: "in", to: "lost", event: "auth fails", bad: true }, { from: "auth", to: "metered", event: "handled" }] },
+      { kind: "wireframe", label: "Usage page", source: ['header flush', '  title "Usage"', '  button "Export" primary', "row", "  nav vertical active=1", "    - By tenant", "    - By endpoint", "  stack w=9", "    grid cols=3", "      card repeat=3", "        lines n=2", "    image ratio=wide"].join("\n") },
+    ],
+  });
+  plan.architecture({
+    summary: "Today the API writes request logs that a nightly job sums into invoices. The target meters in the API middleware and streams events to a usage store the billing export reads.",
+    current: { nodes: [{ id: "edge", label: "Edge workers" }, { id: "api", label: "API" }, { id: "logs", label: "Request logs" }, { id: "nightly", label: "Nightly sum job" }, { id: "billing", label: "Billing export" }], edges: [{ from: "edge", to: "api" }, { from: "api", to: "logs" }, { from: "logs", to: "nightly" }, { from: "nightly", to: "billing" }] },
+    target: { nodes: [{ id: "edge", label: "Edge workers" }, { id: "api", label: "API" }, { id: "meter", label: "Meter middleware" }, { id: "stream", label: "Usage stream" }, { id: "store", label: "Usage store" }, { id: "billing", label: "Billing export" }], edges: [{ from: "edge", to: "api" }, { from: "api", to: "meter" }, { from: "meter", to: "stream" }, { from: "stream", to: "store" }, { from: "store", to: "billing" }] },
+    changed: ["billing"],
+    changes: [
+      { component: "Meter middleware", kind: "add", decisions: ["N1"], note: "counts each request with its tenant" },
+      { component: "Nightly sum job", kind: "remove", decisions: ["N4"], note: "replaced by the usage store" },
+      { component: "Billing export", kind: "change", decisions: ["N4"], note: "reads the usage store, not logs" },
+    ],
+  });
+  plan.slices([
+    { title: "Meter middleware behind a flag", deliverable: "The API counts requests per tenant into the stream, off by default.", acceptance: ["Counts match logs within 0.1% in staging", "Flag off changes nothing"], touches: ["api/middleware", "api/config"], dependsOn: [], size: "M", mode: "AFK", decisions: ["N1"], brief: "Add the middleware after auth so tenants are known." },
+    { title: "Usage store and backfill", deliverable: "A usage table filled from the stream and 90 days of logs.", acceptance: ["Backfill is idempotent"], touches: ["db/migrations", "jobs/backfill"], dependsOn: ["S1"], size: "L", mode: "HIL", decisions: ["N4"], brief: "Partition by day." },
+    { title: "Billing export reads the store", deliverable: "The export reads usage from the store.", acceptance: ["Invoices match the old path for a month"], touches: ["billing/export"], dependsOn: ["S2"], size: "S", mode: "AFK", decisions: ["N4"], brief: "Run both paths and diff before switching." },
+  ]);
+  await plan.artifact("rfc", "# Usage metering v2\n\n## Problem\nUsage is summed nightly from logs, so invoices lag a day and miss rejected requests.\n\n## Decision so far\nTBD(N1): where metering runs.\n", false);
+  await plan.flush();
+  agent = (sent) => {
+    // SAFETY: the dev server runs one workflow, so every action it hears is that workflow's.
+    const action = sent as PlanAction;
+    if (action.type === "opinion.request") {
+      const id = plan.state.plan!.opinions.at(-1)!.id;
+      later(() => plan.postOpinionFindings(id, { summary: "The edge option is underspecified.", runId: "run-rev-1", findings: [{ severity: "High", claim: "Edge workers cannot see tenant ids, so per-tenant counts need a join later.", suggestion: "Score the edge option's correctness lower." }, { severity: "Low", claim: "The flow lens does not show retries." }] }), 1500);
+    } else if (action.type === "opinion.send") {
+      later(() => {
+        const o = plan.state.plan!.opinions.find((x) => x.id === action.opinionId)!;
+        const sent2 = o.findings.filter((f) => f.verdict === "accept" && (!f.outcome || f.ruling === "reviewer"));
+        plan.updateOpinion(o.id, { updates: sent2.map((f, i) => ({ findingId: f.id, status: i === 0 ? ("done" as const) : ("declined" as const), reply: i === 0 ? "Lowered the edge option's tenant score and said why." : "Retries are out of scope for this node." })), before: "Edge: latency 5, ops 2", after: "Edge: latency 5, ops 2\nEdge: tenants 1 (no tenant ids at the edge)" });
+      }, 1500);
+    } else if (action.type === "opinion.ask") {
+      later(() => plan.updateOpinion(action.opinionId, { replies: [{ findingId: action.findingId, text: "Tenant ids arrive only after auth, which runs in the API." }] }));
+    } else if (action.type === "node.work" && action.kind === "research") {
+      later(() => plan.node(action.nodeId, { run: { status: "running", note: "research subagent started", runIds: ["run-20"] } }), 400);
+      later(() => plan.node(action.nodeId, { run: { status: "done", note: "3 sources" }, result: { markdown: "The provider accepts batches of up to 1,000 events, idempotent by event id [docs](https://example.invalid).", visuals: [{ kind: "matrix", label: "Limits", rows: ["Batch size", "Rate", "Idempotency"], columns: ["Provider", "Need"], cells: [[{ value: "1,000" }, { value: "500", tone: "good" }], [{ value: "100/s" }, { value: "4/s", tone: "good" }], [{ value: "event id" }, { value: "required", tone: "warn" }]] }] } }), 2500);
+    } else if (action.type === "artifact.request") {
+      later(() => void plan.artifact(action.kind, `# ${action.kind}\n\nWritten from ${plan.state.plan!.decisions.length} decisions.`, true));
+    } else if (action.type === "node.ask") {
+      later(() => plan.node(action.nodeId, { text: "The API runs auth, so it is the first place the tenant is known." }));
+    }
+  };
+  return url;
+}
+
 const START = new Map([
+  ["plan", startPlan],
   ["forge", startForge],
   ["feedback", startFeedback],
   ["review", startReview],

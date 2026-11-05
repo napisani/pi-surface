@@ -1,10 +1,13 @@
 // The Changes tab: the working tree against the commit the page opened at,
 // so the user sees exactly what the fixes changed, committed or not.
 import type { CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
-import { CodeView, type CodeViewReactOptions } from "@pierre/diffs/react";
-import { useMemo, useState } from "react";
+import { CodeView, type CodeViewHandle, type CodeViewReactOptions } from "@pierre/diffs/react";
+import { useMemo, useRef, useState } from "react";
 import { createDiffItemsBuilder, type LineItemMap, type LineItemRef } from "../../../../web/kit/diffItems.ts";
 import { THEME } from "../../../../web/kit/diffTheme.ts";
+import { useKeyboardPane } from "../../../../web/kit/hooks/useKeyboardPane.ts";
+import { useDiffCommands } from "../../../../web/kit/hooks/useDiffCommands.ts";
+import { useJumpTo } from "../../../../web/kit/hooks/useJumpTo.ts";
 import { loadBlob } from "../../../../web/kit/hooks/useBlob.ts";
 import { usePatches } from "../../../../web/kit/hooks/usePatches.ts";
 import { useStoredState } from "../../../../web/kit/hooks/useStoredState.ts";
@@ -50,7 +53,11 @@ function ChangesStatus({ changed, shown, loaded }: { changed: number; shown: num
 }
 
 export function ChangesTab() {
+  const column = useRef<HTMLDivElement>(null);
+  useKeyboardPane(column, "Changes");
   const files = useFeedback(selectFiles);
+  const viewer = useRef<CodeViewHandle<LineItemRef, undefined>>(null);
+  const jump = useJumpTo(viewer);
   const since = useFeedback(selectSince);
   const github = useFeedback(selectGithub);
   const filter = useValue(changesFilter);
@@ -84,9 +91,10 @@ export function ChangesTab() {
     }),
     [diffStyle, revision],
   );
+  useDiffCommands({ id: "feedback.changes", files: shown, patches, viewer, open: (target) => { collapsedStore.update((current) => new Set([...current].filter((path) => path !== target.path))); jump(target); }, cycleLayout: () => setDiffStyle(diffStyle === "split" ? "unified" : "split"), pickerKey: "<leader>ff" });
   const noText = patches ? shown.filter((f) => !patches.has(f.path)) : [];
   return (
-    <div className={css.column}>
+    <div className={css.column} ref={column}>
       <div className={css.toolbar}>
         <span>
           {files.length} file{files.length === 1 ? "" : "s"} changed since {since.slice(0, 8)}
@@ -98,7 +106,7 @@ export function ChangesTab() {
       </div>
       {noText.length ? <div className={css.binary}>No text diff (binary or mode change): {noText.map((f) => f.path).join(", ")}</div> : null}
       <ChangesStatus changed={files.length} shown={shown.length} loaded={patches !== undefined} />
-      <CodeView className={css.viewer} items={items} options={options} renderCustomHeader={renderHeader} />
+      <CodeView ref={viewer} className={css.viewer} items={items} options={options} renderCustomHeader={renderHeader} />
     </div>
   );
 }

@@ -56,7 +56,7 @@ export function ApprovalBar({ kind, draft, rfcRequested }: { kind: DraftKind; dr
         {path ? <> at {path}</> : null}. Approve it, or say what to change.
       </span>
       <Row>
-        <input ref={input} className={css.note} placeholder="What to change…" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void review("changes")} />
+        <input ref={input} className={css.note} placeholder="What to change…" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && !e.repeat && !busy && void review("changes")} />
         <Button disabled={busy} onClick={() => void review("changes")}>
           Request changes
         </Button>

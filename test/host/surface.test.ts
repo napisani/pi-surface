@@ -68,3 +68,40 @@ test("a workflow's page URL opens the browser once, under one server shared by e
     await s.close();
   }
 });
+
+test("a workflow that persists its own state logs only what it remembers, and restores after replay", async () => {
+  const saved: number[] = [];
+  const own = { ...counter("own"), persistence: "own" as const };
+  const create = own.create;
+  own.create = (ctx) => {
+    const session = create(ctx);
+    return Object.assign(session, {
+      restore: async () => {
+        saved.push(ctx.store.state.count);
+        ctx.commit([{ op: "replace", path: "/count", value: 41 }]);
+      },
+    });
+  };
+  const persisted: OpsEntry[] = [];
+  const s = new Surface({ persist: (e) => persisted.push(e), notifyAgent: () => undefined, runner: spawnRunner, settings: () => ({ surface: { x: 1 } }), models: () => ["p/m"] }, [own], "/nonexistent");
+  const { session } = s.typed(own);
+  session.bump();
+  assert.deepEqual(persisted, [], "commit stays out of the session log");
+  session.ctx.remember([{ op: "replace", path: "/count", value: 7 }]);
+  assert.deepEqual(persisted, [{ workflow: "own", ops: [{ op: "replace", path: "/count", value: 7 }] }]);
+  assert.deepEqual(session.ctx.settings(), { surface: { x: 1 } });
+  assert.deepEqual(session.ctx.models(), ["p/m"]);
+
+  const resumed = new Surface({ persist: () => undefined, notifyAgent: () => undefined, runner: spawnRunner }, [own], "/nonexistent", persisted);
+  assert.deepEqual(await resumed.restore(), []);
+  assert.deepEqual(saved, [7], "restore runs after the remembered ops replay");
+  assert.equal(resumed.typed(own).store.state.count, 41);
+});
+
+test("a failing restore is reported without stopping the others", async () => {
+  const broken = counter("broken");
+  const create = broken.create;
+  broken.create = (ctx) => Object.assign(create(ctx), { restore: async () => Promise.reject(new Error("plan directory is gone")) });
+  const s = new Surface({ persist: () => undefined, notifyAgent: () => undefined, runner: spawnRunner }, [broken, A], "/nonexistent", [{ workflow: "broken", ops: [] }]);
+  assert.deepEqual(await s.restore(), [{ workflow: "broken", error: "plan directory is gone" }]);
+});

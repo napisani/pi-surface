@@ -18,8 +18,9 @@ a:hover{text-decoration:underline}
 h2{font-size:18px;margin:0 0 4px}
 h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:20px 0 10px;font-weight:600}
 h4{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 8px;font-weight:600}
-input:not([type=checkbox]),textarea{background:var(--well);border:1px solid var(--line);border-radius:7px;color:var(--ink);font:inherit;padding:7px 10px;outline:none;min-width:0}
-input:focus,textarea:focus{border-color:var(--focus)}
+input:not([type=checkbox]),textarea,select{background:var(--well);border:1px solid var(--line);border-radius:7px;color:var(--ink);font:inherit;padding:7px 10px;outline:none;min-width:0}
+select{padding:5px 8px;cursor:pointer}
+input:focus,textarea:focus,select:focus{border-color:var(--focus)}
 textarea{width:100%;resize:vertical;font-family:var(--mono);font-size:13px;margin-top:8px}
 details>summary{cursor:pointer;color:var(--dim)}
 ul,ol{padding-left:20px}

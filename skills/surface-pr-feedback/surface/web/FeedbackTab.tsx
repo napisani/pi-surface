@@ -1,7 +1,9 @@
 // The Feedback tab: every item grouped by where it is in the flow, beside the
-// selected item. j and k step through the list in the order it shows.
+// selected item.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useGlobalKey } from "../../../../web/kit/hooks/useGlobalKey.ts";
+import { adjacentId } from "../../../../web/kit/keyboard.ts";
+import { useCommands, useKeyboard } from "../../../../web/kit/keyboardContext.ts";
+import { openItem } from "./nav.ts";
 import { useHashState } from "../../../../web/kit/hooks/useHashState.ts";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import type { FeedbackState } from "../state.ts";
@@ -9,8 +11,7 @@ import css from "./FeedbackTab.module.css";
 import { useFeedback } from "./hooks.ts";
 import { ItemDetail } from "./ItemDetail.tsx";
 import { ItemList } from "./ItemList.tsx";
-import { openItem } from "./nav.ts";
-import { listGroups, stepFrom, type ListFilter } from "./stage.ts";
+import { listGroups, type ListFilter } from "./stage.ts";
 
 const selectItems = (s: FeedbackState) => s.items;
 
@@ -23,23 +24,21 @@ export function FeedbackTab() {
   const order = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const item = items.find((i) => i.id === itemParam) ?? order[0];
 
+  const keyboard = useKeyboard();
+  const move = (delta: number) => {
+    const id = adjacentId(order.map((entry) => entry.id), item?.id, delta);
+    if (id) { openItem(id); }
+  };
+  useCommands([
+    { id: "feedback.item.next", label: "Next feedback item", keys: ["j", "]d"], run: () => move(1) },
+    { id: "feedback.item.previous", label: "Previous feedback item", keys: ["k", "[d"], run: () => move(-1) },
+    { id: "feedback.item.find", label: "Find feedback", keys: ["<leader>fq"], run: () => keyboard?.pick("Feedback items", order.map((entry) => ({ id: entry.id, label: entry.id, detail: entry.messages.map((message) => message.body).join(" "), run: () => openItem(entry.id) }))) },
+  ]);
   useEffect(() => {
     if (itemParam) {
       detail.current?.scrollIntoView({ block: "nearest" });
     }
   }, [itemParam]);
-  // The tab sits in an Activity, which drops this listener while another tab shows.
-  useGlobalKey((event) => {
-    if (event.key !== "j" && event.key !== "k") {
-      return;
-    }
-    const next = stepFrom(order, item?.id, event.key === "j" ? 1 : -1);
-    if (!next) {
-      return;
-    }
-    openItem(next);
-    document.querySelector(`[data-item="${next}"]`)?.scrollIntoView({ block: "nearest" });
-  });
 
   return (
     <div className={css.layout}>

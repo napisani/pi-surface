@@ -1,8 +1,9 @@
 // One finding in full: the agent's account, the code, and what the user
 // makes of it: comments, change requests, questions.
 import { anchorOf, type CodeRef as CodeRefValue } from "../../../../src/kit/code.ts";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { outsideFiles, type Finding } from "../../../../src/kit/findings.ts";
+import { AgentComposer } from "../../../../web/kit/AgentComposer.tsx";
 import { ChatThread } from "../../../../web/kit/ChatThread.tsx";
 import { CodeRef } from "../../../../web/kit/CodeRef.tsx";
 import { FindingFacts } from "../../../../web/kit/FindingFacts.tsx";
@@ -72,6 +73,7 @@ export function FindingDetail({ finding: f }: { finding: Finding }) {
   const drafting = usePending(`draft-${f.id}`);
   const autoDrafting = usePending(`auto-${f.id}`);
   const primary = f.primary;
+  const conversation = useRef<HTMLDivElement>(null);
   return (
     <>
       <FixBanner finding={f} />
@@ -130,7 +132,8 @@ export function FindingDetail({ finding: f }: { finding: Finding }) {
         </>
       ) : null}
       <h3>Ask about this finding</h3>
-      <ChatThread messages={f.thread} />
+      <div ref={conversation} tabIndex={-1}><ChatThread messages={f.thread} /></div>
+      <AgentComposer id="review.finding" editable={live && inPr} prepare={() => ({ key: `finding:${f.id}`, label: f.title, reference: `@${primary.path}:${primary.startLine}-${primary.endLine} (${primary.rev})`, ask: (text) => post({ type: "finding.ask", findingId: f.id, text }, `ask-${f.id}`), edit: live && inPr ? (body) => post({ type: "request.create", anchor: anchorOf(primary), body }, `freq-${f.id}`) : undefined, onSent: () => conversation.current?.focus() })} />
       <AskRow key={f.id} placeholder="Ask the agent about this finding" pendingKey={`ask-${f.id}`} onSend={(text) => post({ type: "finding.ask", findingId: f.id, text }, `ask-${f.id}`)} />
     </>
   );

@@ -38,7 +38,8 @@ Every design question goes to the page. Never ask a design question in plain tex
    - interface or type definitions in code when it is about a contract;
    - a call tree or ASCII flow when it is about control flow, ownership, or where a seam goes;
    - a file tree when it is about module boundaries;
-   - a data table when it is about the shape of data or a side-by-side comparison.
+   - a data table when it is about the shape of data or a side-by-side comparison;
+   - an `archDiff` when it changes which components exist or how they connect, a `matrix` when options are measured against criteria, a `stateMachine` when it is about states and transitions, and a `wireframe` when it changes a screen.
 5. **Spec impact.** Say what the option does to the spec, and to the RFC when one is requested: sections it adds or changes, decisions it unlocks, and any new subsystem or platform obligation. Score that impact along the session's [spec dimensions](#spec-dimensions).
 6. **Plain language.** The user reads every word of a question once, cold. Write questions, option descriptions, pros, cons, score reasons, impact lines, and `look` lines with short sentences and concrete words. Cut filler and inflated claims, then check them against these rules:
    - An option description is one or two whole sentences, at most 280 characters: what changes, and what it costs. No flag names, file names, or internal terms the user has not seen in this session unless the sentence defines them. Each pro or con is at most 100 characters; the page rejects longer ones.
@@ -89,6 +90,16 @@ The user can question any question before answering it. Follow-ups arrive as `Su
 - **The question stays open** on the page until the user answers or defers it.
 - **A follow-up that exposes a missing decision** goes back into the design tree as a new question, rather than being resolved inside the answer.
 - **In a batched round**, answers already given to the other questions stand; only the questioned one is re-asked, alongside any new frontier it unlocked. A follow-up never counts as the round's answer.
+
+### Second opinions
+
+The user can ask another model to review a question's options or a draft. The messages say what to run:
+
+- **second opinion On**: run the review as a read-only subagent on the named model with the given prompt, and publish its findings unchanged with `surface_forge_opinion` (with the run id). Do not act on them; the user triages first.
+- **corrections**: you are the author. Apply each accepted finding, revising options with `surface_forge_reply` or the draft with `surface_forge_draft`, then report done or declined per finding, with the text before and after, in one `surface_forge_opinion_update`.
+- **question about On.k**: answer in its thread with `surface_forge_opinion_update` `replies`.
+
+A second opinion never changes an answer the user gave.
 
 ## Phase 1 — Frame (highest-leverage questions first)
 

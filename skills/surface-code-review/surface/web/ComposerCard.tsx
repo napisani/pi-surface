@@ -8,7 +8,7 @@ import { CardHead } from "../../../../web/kit/primitives/CardHead.tsx";
 import { CardId } from "../../../../web/kit/primitives/CardId.tsx";
 import { Row } from "../../../../web/kit/primitives/Row.tsx";
 import { Text } from "../../../../web/kit/primitives/Text.tsx";
-import { usePending } from "../../../../web/kit/store.ts";
+import { useDraft, usePending } from "../../../../web/kit/store.ts";
 import { QUICK_ASKS } from "./CommentCard.tsx";
 import { useGithub, useMode, usePost } from "./hooks.ts";
 import { sideRev, where, type Composer } from "./lineItems.ts";
@@ -29,7 +29,7 @@ export function ComposerCard({ composer }: { composer: Composer }) {
   const live = mode === "live";
   const github = useGithub();
   const busy = usePending("composer");
-  const [text, setText] = useState("");
+  const [text, setText] = useDraft(`line-composer:${JSON.stringify(composer)}`);
   const [assistOpen, setAssistOpen] = useState(false);
   const reply = composer.inReplyTo !== undefined;
   const close = () => composerStore.set(null);
@@ -39,11 +39,13 @@ export function ComposerCard({ composer }: { composer: Composer }) {
       return;
     }
     if (await post({ type: "comment.create", anchor: composer.anchor, body: text, inReplyTo: composer.inReplyTo, then }, "composer")) {
+      setText("");
       close();
     }
   };
   const request = async () => {
     if (text.trim() && (await post({ type: "request.create", anchor: composer.anchor, body: text.trim() }, "composer"))) {
+      setText("");
       close();
     }
   };
@@ -53,6 +55,7 @@ export function ComposerCard({ composer }: { composer: Composer }) {
     }
     const { path, side, line, startLine } = composer.anchor;
     if (await post({ type: "question.ask", ref: { path, rev: sideRev(mode, side), startLine: startLine ?? line, endLine: line }, text: text.trim() }, "composer")) {
+      setText("");
       close();
     }
   };

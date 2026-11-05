@@ -1,6 +1,7 @@
 import { Type } from "typebox";
 import { defineSurfaceTool, defineWorkflow } from "../../../src/host/workflow.ts";
 import { FINDING_DIMENSIONS, FIX_SIZES, TRIAGE_BUCKETS } from "../../../src/kit/findings.ts";
+import { opinionTools } from "../../../src/kit/opinionTools.ts";
 import { Anchor, codeRefSchema, LabeledVisual } from "../../../src/kit/schemas.ts";
 import { parseAction, type PageAction } from "./actions.ts";
 import { ReviewSession } from "./session.ts";
@@ -227,6 +228,6 @@ export default defineWorkflow<ReturnType<typeof emptyState>, PageAction, ReviewS
   title: "code review",
   emptyState,
   parseAction,
-  tools: [open, status, findings, commentDraft, findingReply, questionReply, walkthrough, requestUpdate],
+  tools: [open, status, findings, commentDraft, findingReply, questionReply, walkthrough, requestUpdate, ...opinionTools<ReviewSession>("review")],
   create: (ctx) => new ReviewSession(ctx),
 });

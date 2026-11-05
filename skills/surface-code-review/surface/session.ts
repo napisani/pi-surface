@@ -2,6 +2,8 @@ import { applyPatch } from "../../../src/host/patch.ts";
 import { messageOf, type SurfaceContext, SurfaceError, type WorkflowSession } from "../../../src/host/workflow.ts";
 import type { Anchor, LabeledVisual } from "../../../src/kit/code.ts";
 import { blobRoute, parseDiffFiles, readBlob } from "../../../src/kit/git.ts";
+import { applyOpinionUpdate, postFindings as postOpinionFindings, type FindingInput as OpinionFindingInput, type OpinionUpdate } from "../../../src/kit/opinion.ts";
+import type { OpinionSession } from "../../../src/kit/opinionTools.ts";
 import { resolveAction, type PageAction } from "./actions.ts";
 import { listReviewComments, loadTarget, postReviewComment, remoteHead, reviewDiff, type OpenInput } from "./github.ts";
 import {
@@ -15,6 +17,7 @@ import {
   finishPosting,
   loadReview,
   moveComment,
+  opinionsPtr,
   postFindings,
   postWalkthrough,
   refreshReview,
@@ -39,7 +42,7 @@ export interface CommentDraftInput {
   note?: string;
 }
 
-export class ReviewSession implements WorkflowSession<PageAction> {
+export class ReviewSession implements WorkflowSession<PageAction>, OpinionSession {
   readonly #ctx: SurfaceContext<ReviewState>;
   /** The diff for the current revision; never persisted, since the worktree is the source. */
   #diff: { revision: number; text: string } | undefined;
@@ -196,6 +199,14 @@ export class ReviewSession implements WorkflowSession<PageAction> {
     );
     this.#commit(ops);
     return id;
+  }
+
+  postOpinionFindings(opinionId: string, input: { findings: OpinionFindingInput[]; summary?: string; runId?: string } | { failed: string }): void {
+    this.#commit(postOpinionFindings(opinionsPtr, this.state.opinions, opinionId, input, this.#ctx.now()));
+  }
+
+  updateOpinion(opinionId: string, update: OpinionUpdate): void {
+    this.#commit(applyOpinionUpdate(opinionsPtr, this.state.opinions, opinionId, update, this.#ctx.now()));
   }
 
   async handleAction(action: PageAction): Promise<void> {

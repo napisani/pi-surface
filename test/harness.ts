@@ -14,20 +14,27 @@ export interface Notified {
   details: unknown;
 }
 
-export function runWorkflow<S, A, Sess extends WorkflowSession<A>>(definition: WorkflowDefinition<S, A, Sess>, webRoot = "/nonexistent") {
+export function runWorkflow<S, A, Sess extends WorkflowSession<A>>(definition: WorkflowDefinition<S, A, Sess>, webRoot = "/nonexistent", options: { settings?: Json; entries?: OpsEntry[] } = {}) {
   const messages: Notified[] = [];
   const batches: PatchOp[][] = [];
+  const logged: OpsEntry[] = [];
   const opened: string[] = [];
   const surface = new Surface(
     {
-      persist: (entry) => batches.push(entry.ops),
+      persist: (entry) => {
+        batches.push(entry.ops);
+        logged.push(entry);
+      },
       notifyAgent: (_workflow, content, details) => messages.push({ content, details }),
       opened: (url) => opened.push(url),
       runner: spawnRunner,
       now: () => NOW,
+      settings: () => options.settings ?? {},
+      models: () => ["openai-codex/gpt-6-luna", "claude-bridge/claude-sonnet-5-5"],
     },
     [definition],
     webRoot,
+    options.entries,
   );
   const { session, store } = surface.typed(definition);
   return {
@@ -36,6 +43,7 @@ export function runWorkflow<S, A, Sess extends WorkflowSession<A>>(definition: W
     store,
     messages,
     batches,
+    logged,
     opened,
     /** The state the persisted batches alone rebuild. */
     replay: () => batches.reduce((state, ops) => applyPatch(state, ops), definition.emptyState()),
@@ -54,6 +62,7 @@ interface FakeContext {
   mode: string;
   ui: { setStatus(key: string, text: string): void; setWidget(key: string, lines: string[] | undefined, options?: { placement?: string }): void; notify(text: string): void };
   sessionManager: { getBranch(): FakeEntry[] };
+  modelRegistry: { getAvailable(): { provider: string; id: string }[] };
 }
 
 type Handler = (event: { type: string }, ctx: FakeContext) => void | Promise<void>;
@@ -139,6 +148,7 @@ export function fakePi(settings: Json = {}) {
       notify: (text: string) => notices.push(text),
     },
     sessionManager: { getBranch: () => branch },
+    modelRegistry: { getAvailable: () => [{ provider: "openai-codex", id: "gpt-6-luna" }, { provider: "claude-bridge", id: "claude-sonnet-5-5" }] },
   });
   const emit = async (name: string, branch: FakeEntry[] = []) => {
     for (const handler of handlers.get(name) ?? []) {
