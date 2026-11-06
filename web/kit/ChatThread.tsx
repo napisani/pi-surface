@@ -6,7 +6,8 @@ import { Markdown } from "./Markdown.tsx";
 import { Working } from "./primitives/Working.tsx";
 
 /** Messages as chat bubbles, with a waiting line while the agent owes an answer. */
-export function ChatThread({ messages, waiting = "waiting for the agent…" }: { messages: readonly ThreadMessage[]; waiting?: string }) {
+/** Pass waiting={null} when the last user message has not gone to the agent yet. */
+export function ChatThread({ messages, waiting = "waiting for the agent…" }: { messages: readonly ThreadMessage[]; waiting?: string | null }) {
   return (
     <div className={css.thread}>
       {messages.map((m, i) => (
@@ -15,7 +16,7 @@ export function ChatThread({ messages, waiting = "waiting for the agent…" }: {
           <Markdown text={m.text} />
         </div>
       ))}
-      {awaitingAgent(messages) ? <Working>{waiting}</Working> : null}
+      {waiting !== null && awaitingAgent(messages) ? <Working>{waiting}</Working> : null}
     </div>
   );
 }

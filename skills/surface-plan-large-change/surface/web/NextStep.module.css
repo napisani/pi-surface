@@ -1,0 +1,17 @@
+.panel{border-left:3px solid var(--tone)}
+.panel h3{color:var(--tone)}
+.blocked{--tone:#8a897f}
+.working{--tone:var(--blue)}
+.start,.findings,.ask,.task,.choose{--tone:var(--amber-ink)}
+.why{margin:0 0 10px;font-size:13.5px;color:var(--dim);max-width:72ch}
+.ask{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px}
+.ask textarea{flex:1;margin:0;font:13px var(--sans)}
+.alt{opacity:.9}
+.more{margin:4px 0 8px}
+.more summary{cursor:pointer;color:var(--dim);font-size:12.5px;margin-bottom:6px}
+.link{background:none;border:0;color:var(--dim);font:12.5px var(--sans);text-decoration:underline;cursor:pointer;padding:0}
+.link:hover{color:var(--ink)}
+.ref{background:none;border:1px solid var(--line);border-radius:6px;color:var(--amber-ink);font:12px var(--mono);margin:0 2px;cursor:pointer}
+.text{width:100%;font:13px var(--sans)}
+.decide{display:flex;gap:8px;align-items:center;margin-top:8px}
+.decide input{flex:1}

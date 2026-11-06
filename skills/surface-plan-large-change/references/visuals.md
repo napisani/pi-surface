@@ -16,6 +16,16 @@ Each visual earns its place by showing something the prose cannot. Pick per ques
 
 Every visual has a short `label` and a `look` line naming the one thing to notice, and uses real names from the code.
 
+## Inside documents
+
+Artifacts, slice briefs, node findings and forge drafts render as rich documents, and these fenced blocks draw as pictures inside them:
+
+- ` ```mermaid ` with mermaid source;
+- ` ```wireframe ` with the wireframe language below;
+- ` ```graph `, ` ```matrix `, ` ```stateMachine `, ` ```archDiff ` and ` ```heatmap ` with one JSON object holding that kind's fields (the same fields as the tool visuals, without `kind` and `label`).
+
+Use them where a picture says it faster than prose: the target architecture in the RFC, the slice order in the delivery section. A block with bad JSON shows its error on the page instead of the picture.
+
 ## Wireframes
 
 One part per line; two spaces of indent nest a part inside the one above. A line is a kind, then any of: a `"quoted label"`, flags, `key=value` properties, `#id`.

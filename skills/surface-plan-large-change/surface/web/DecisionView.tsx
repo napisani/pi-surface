@@ -1,6 +1,6 @@
 // The Decision tab: one node at a time. Its options compared by lens with
 // their trade-offs, its findings, its checklist, and what deciding it unblocks.
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { OptionSet } from "../../../../src/kit/options.ts";
 import { ChatThread } from "../../../../web/kit/ChatThread.tsx";
 import { cx } from "../../../../web/kit/cx.ts";
@@ -11,7 +11,6 @@ import { AskRow } from "../../../../web/kit/primitives/AskRow.tsx";
 import { Badge } from "../../../../web/kit/primitives/Badge.tsx";
 import { Banner } from "../../../../web/kit/primitives/Banner.tsx";
 import { Button } from "../../../../web/kit/primitives/Button.tsx";
-import { Checkbox } from "../../../../web/kit/primitives/Checkbox.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Row } from "../../../../web/kit/primitives/Row.tsx";
@@ -20,25 +19,49 @@ import { Text } from "../../../../web/kit/primitives/Text.tsx";
 import { Working } from "../../../../web/kit/primitives/Working.tsx";
 import { Radar } from "../../../../web/kit/Radar.tsx";
 import { ScoreTable } from "../../../../web/kit/ScoreTable.tsx";
+import { RichDoc } from "../../../../web/kit/RichDoc.tsx";
 import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { Visuals } from "../../../../web/kit/Visuals.tsx";
+import { GraphView } from "../../../../web/kit/GraphView.tsx";
 import { dependents, frontier, isBlocked, type Plan, type PlanNode } from "../state.ts";
 import css from "./DecisionView.module.css";
 import { usePlan, usePost } from "./hooks.ts";
-import { toneOf } from "./MapView.tsx";
+import { GROUP_LABEL, groupOf, neighborhood, statusLine, unblocks } from "./navigator.ts";
+import { NextStep } from "./NextStep.tsx";
+import { NodeNav } from "./NodeNav.tsx";
 import { openNode } from "./nav.ts";
 
 const colorOf = (i: number) => OPTION_COLORS[i % OPTION_COLORS.length];
 
-function Switcher({ plan, current }: { plan: Plan; current: string }) {
+/** What this node waits on and what waits on it, in words and as a small graph. */
+function Dependencies({ plan, node }: { plan: Plan; node: PlanNode }) {
+  const after = unblocks(plan, node.id);
+  const graph = useMemo(() => neighborhood(plan, node.id), [plan, node.id]);
+  if (!node.blockedBy.length && !after.length) {
+    return null;
+  }
+  const chip = (id: string) => {
+    const other = plan.nodes.find((n) => n.id === id);
+    return other ? (
+      <button key={id} type="button" className={cx(css.dep, css[groupOf(plan, other)])} onClick={() => openNode(id)} title={other.title}>
+        <b>{id}</b> {statusLine(plan, other)}
+      </button>
+    ) : null;
+  };
   return (
-    <div className={css.switch}>
-      {plan.nodes.map((n) => (
-        <button key={n.id} type="button" className={cx(css.chip, css[toneOf(plan, n)], n.id === current && css.on)} title={n.title} onClick={() => openNode(n.id)}>
-          {n.id}
-        </button>
-      ))}
-    </div>
+    <Panel>
+      <div className={css.deps}>
+        <div>
+          <h3>Waits on</h3>
+          {node.blockedBy.length ? node.blockedBy.map(chip) : <Text tone="faint">nothing; it can be decided now</Text>}
+        </div>
+        <div>
+          <h3>Unblocks</h3>
+          {after.length ? after.map((n) => chip(n.id)) : <Text tone="faint">nothing yet</Text>}
+        </div>
+      </div>
+      {graph.nodes.length > 1 ? <GraphView graph={graph} selected={node.id} onNode={openNode} /> : null}
+    </Panel>
   );
 }
 
@@ -128,63 +151,6 @@ function Options({ node, choice, locked }: { node: PlanNode; choice: OptionSet; 
   );
 }
 
-function DecideInWords({ node }: { node: PlanNode }) {
-  const post = usePost();
-  const plan = usePlan();
-  const [text, setText] = useState("");
-  const [note, setNote] = useState("");
-  const task = node.type === "task";
-  const unchecked = node.checklist?.some((c) => !c.done) ?? false;
-  return (
-    <Panel>
-      {node.checklist?.length ? (
-        <>
-          <h3>Steps</h3>
-          {node.checklist.map((c, i) => (
-            <Checkbox key={c.text} checked={c.done} onChange={(done) => void post({ type: "node.check", nodeId: node.id, index: i, done })}>
-              {c.text}
-            </Checkbox>
-          ))}
-        </>
-      ) : null}
-      <h3>{task ? "Done?" : "Decide"}</h3>
-      {task ? null : <textarea className={css.text} rows={2} placeholder="What was decided, in a sentence" value={text} onChange={(e) => setText(e.target.value)} />}
-      <div className={css.decide}>
-        <input placeholder="Optional note" value={note} onChange={(e) => setNote(e.target.value)} />
-        <Button onClick={() => void post({ type: "node.defer", nodeId: node.id })}>Defer</Button>
-        <Button
-          kind="primary"
-          disabled={isBlocked(plan, node) || unchecked || (!task && !text.trim())}
-          onClick={() => void post({ type: "node.decide", nodeId: node.id, text: task ? undefined : text, note }, `decide:${node.id}`)}
-        >
-          {task ? "Mark done" : "Decide"}
-        </Button>
-      </div>
-    </Panel>
-  );
-}
-
-function Work({ node }: { node: PlanNode }) {
-  const post = usePost();
-  const [focus, setFocus] = useState("");
-  const kinds = [
-    ...(node.type === "discuss" && !node.choice ? [["options", "Ask for options"] as const] : []),
-    ["deeper", "Go deeper"] as const,
-    ["research", "Research this"] as const,
-    ["spike", "Spike this"] as const,
-  ];
-  return (
-    <Row>
-      <input className={css.focus} placeholder="Optional focus for the agent" value={focus} onChange={(e) => setFocus(e.target.value)} />
-      {kinds.map(([kind, label]) => (
-        <Button key={kind} size="small" onClick={() => void post({ type: "node.work", nodeId: node.id, kind, focus }, `work:${node.id}`)}>
-          {label}
-        </Button>
-      ))}
-    </Row>
-  );
-}
-
 function Run({ node }: { node: PlanNode }) {
   const run = node.run;
   if (!run) {
@@ -213,50 +179,49 @@ export function DecisionView() {
     return <EmptyState title="No questions yet.">The agent charts the map once the destination is named.</EmptyState>;
   }
   const locked = node.status !== "open";
-  const waiting = node.blockedBy.filter((b) => plan.nodes.find((n) => n.id === b)?.status !== "decided");
+  const group = groupOf(plan, node);
   return (
-    <div className={css.layout}>
-      <Switcher plan={plan} current={node.id} />
-      <h2 className={css.title}>
-        <span className={css.id}>{node.id}</span> {node.title}
-      </h2>
-      <Row>
-        <Badge>{node.type}</Badge>
-        <Badge tone={node.mode === "AFK" ? "info" : "amber"}>{node.mode}</Badge>
-        {node.fromFog ? <Badge tone="muted">from {node.fromFog}</Badge> : null}
-        {waiting.length ? (
-          <Text tone="warn" small>
-            waits on{" "}
-            {waiting.map((b) => (
-              <button key={b} type="button" className={css.ref} onClick={() => openNode(b)}>
-                {b}
-              </button>
-            ))}
+    <div className={css.page}>
+      <NodeNav plan={plan} current={node.id} />
+      {/* Keyed once here: per-child keys of node.id collide among siblings and leave the old node's DOM behind. */}
+      <div key={node.id} className={css.layout}>
+        <h2 className={css.title}>
+          <span className={css.id}>{node.id}</span> {node.title}
+        </h2>
+        <Row>
+          <span className={cx(css.state, css[group])}>{GROUP_LABEL[group]}</span>
+          <Text tone="dim" small>
+            {statusLine(plan, node)}
           </Text>
+          <Badge>{node.type}</Badge>
+          <Badge tone={node.mode === "AFK" ? "info" : "amber"} title={node.mode === "AFK" ? "Away from keyboard: an agent works on it on its own while you do other things." : "Human in the loop: it needs your judgment."}>
+            {node.mode === "AFK" ? "AFK · agent" : "HIL · you"}
+          </Badge>
+          {node.fromFog ? <Badge tone="muted">from {node.fromFog}</Badge> : null}
+        </Row>
+        {node.summary ? <Markdown text={node.summary} /> : null}
+        {locked ? <Settled plan={plan} node={node} /> : null}
+        <Dependencies plan={plan} node={node} />
+        {locked ? null : <NextStep plan={plan} node={node} />}
+        <Run node={node} />
+        {node.result ? (
+          <Panel>
+            <h3>Findings</h3>
+            <RichDoc doc={{ kind: "finding", id: node.id, label: `the findings on ${node.id}` }} markdown={node.result.markdown} comments={node.comments ?? []} />
+            {node.result.visuals.length ? <Visuals visuals={node.result.visuals} /> : null}
+          </Panel>
         ) : null}
-      </Row>
-      {node.summary ? <Markdown text={node.summary} /> : null}
-      {locked ? <Settled plan={plan} node={node} /> : null}
-      <Run node={node} />
-      {node.result ? (
+        {node.visuals.length ? <Visuals visuals={node.visuals} /> : null}
+        {node.choice ? <Options node={node} choice={node.choice} locked={locked} /> : null}
         <Panel>
-          <h3>Findings</h3>
-          <Markdown text={node.result.markdown} />
-          {node.result.visuals.length ? <Visuals visuals={node.result.visuals} /> : null}
+          <h3>Discuss</h3>
+          <ChatThread messages={node.thread} />
+          <AskRow placeholder="Ask the agent about this question" pendingKey={`ask:${node.id}`} onSend={(text) => post({ type: "node.ask", nodeId: node.id, text }, `ask:${node.id}`)} />
         </Panel>
-      ) : null}
-      {node.visuals.length ? <Visuals key={node.id} visuals={node.visuals} /> : null}
-      {node.choice ? <Options key={node.id} node={node} choice={node.choice} locked={locked} /> : null}
-      {!node.choice && !locked ? <DecideInWords key={node.id} node={node} /> : null}
-      {locked ? null : <Work node={node} />}
-      <Panel>
-        <h3>Discuss</h3>
-        <ChatThread messages={node.thread} />
-        <AskRow key={node.id} placeholder="Ask the agent about this question" pendingKey={`ask:${node.id}`} onSend={(text) => post({ type: "node.ask", nodeId: node.id, text }, `ask:${node.id}`)} />
-      </Panel>
-      <Panel>
-        <SecondOpinion target={{ kind: "node", id: node.id, label: `${node.id} ${node.title}` }} opinions={plan.opinions} defaults={plan.reviewer} />
-      </Panel>
+        <Panel>
+          <SecondOpinion target={{ kind: "node", id: node.id, label: `${node.id} ${node.title}` }} opinions={plan.opinions} defaults={plan.reviewer} />
+        </Panel>
+      </div>
     </div>
   );
 }

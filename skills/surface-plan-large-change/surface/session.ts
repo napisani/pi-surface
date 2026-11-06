@@ -6,6 +6,9 @@ import { checkWorktree } from "../../../src/kit/git.ts";
 import { SurfaceError, type SurfaceContext, type WorkflowSession } from "../../../src/host/workflow.ts";
 import { applyOpinionUpdate, postFindings, type FindingInput, type OpinionUpdate } from "../../../src/kit/opinion.ts";
 import type { OpinionSession } from "../../../src/kit/opinionTools.ts";
+import { createEditReporter, type EditReporter } from "../../../src/kit/docEdits.ts";
+import { updateDocComments, type CommentUpdate } from "../../../src/kit/docComments.ts";
+import type { DocSession } from "../../../src/kit/docTools.ts";
 import type { OptionSet } from "../../../src/kit/options.ts";
 import { planLine, resolveAction, type Effect, type PlanAction } from "./actions.ts";
 import { checkSlug, listPlans, loadPlan, planDir, plansRoot, readInbox, releaseLock, repoName, savePlan, sendReport, slugify, takeLock, writeArtifact } from "./files.ts";
@@ -15,6 +18,7 @@ import {
   ingestReports,
   newPlan,
   opinionsPtr,
+  planDoc,
   postArtifact,
   setArchitecture,
   setSlices,
@@ -58,15 +62,17 @@ export interface ReportParams {
   deviations?: { text: string; nodes?: string[] }[];
 }
 
-export class PlanSession implements WorkflowSession<PlanAction>, OpinionSession {
+export class PlanSession implements WorkflowSession<PlanAction>, OpinionSession, DocSession {
   readonly #ctx: SurfaceContext<PlanState>;
   /** Names this Pi session in the plan's lock. */
   readonly #id = `pi-${process.pid}-${randomBytes(3).toString("hex")}`;
   #saving: Promise<void> = Promise.resolve();
+  readonly #edits: EditReporter<PlanAction>;
   #saveError: string | undefined;
 
   constructor(ctx: SurfaceContext<PlanState>) {
     this.#ctx = ctx;
+    this.#edits = createEditReporter((content, action) => ctx.inform(content, action));
   }
 
   get state(): PlanState {
@@ -213,14 +219,34 @@ export class PlanSession implements WorkflowSession<PlanAction>, OpinionSession 
   }
 
   async handleAction(action: PlanAction): Promise<void> {
-    const { ops, message, effect } = resolveAction(this.state, action, this.#ctx.now());
+    const { ops, message, effect, edited } = resolveAction(this.state, action, this.#ctx.now());
     this.#commit(ops);
+    if (edited) {
+      await this.#edited(edited, action);
+    }
     if (effect) {
       await this.#effect(effect);
     }
     if (message) {
       this.#ctx.notifyAgent(message, action);
     }
+  }
+
+  /** Writes an edited artifact's file, and tells the agent once the user stops editing that document. */
+  async #edited(edit: { kind: string; id: string; label: string; before: string; after: string }, action: PlanAction): Promise<void> {
+    const ref = this.state.ref!;
+    if (edit.kind === "artifact") {
+      await writeArtifact(ref.dir, `${edit.id}.md`, edit.after);
+    }
+    this.#edits.edited(`${edit.kind}:${edit.id}`, edit, action, this.line());
+  }
+
+  answerDocComments(kind: string, id: string, updates: CommentUpdate[]): void {
+    const ref = this.state.ref;
+    if (!ref) {
+      throw new SurfaceError("no plan is open");
+    }
+    this.#commit(updateDocComments(planDoc(this.state, kind, id, ref.dir), updates, this.#ctx.now()));
   }
 
   // ---- agent tools ----
@@ -295,6 +321,7 @@ export class PlanSession implements WorkflowSession<PlanAction>, OpinionSession 
   }
 
   async close(): Promise<void> {
+    this.#edits.flush();
     await this.#saving;
     const ref = this.state.ref;
     if (ref) {

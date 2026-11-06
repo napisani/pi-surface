@@ -141,3 +141,48 @@ test("a second opinion on a node tells the agent where the node lives and how to
     await close();
   }
 });
+
+test("comments on an artifact survive the agent's revision, go out as one batch, and the user's edits rewrite its file", async () => {
+  const { plan, worktree, messages, dir, close } = setup();
+  try {
+    await plan.open({ worktree, title: "Metering v2", slug: "metering-v2" });
+    await plan.artifact("rfc", "# RFC\n\nWe meter at the edge.\n", false);
+    const doc = { docKind: "artifact", docId: "rfc" };
+    await plan.handleAction({ type: "doc.comment", ...doc, anchor: { quote: "at the edge", prefix: "We meter ", suffix: "." }, text: "The API knows the tenant." });
+    await plan.artifact("rfc", "# RFC\n\nWe meter at the edge, for now.\n", false);
+    assert.equal(plan.state.plan!.artifacts.rfc!.comments![0].id, "K1", "a republished artifact keeps its comments");
+
+    await plan.handleAction({ type: "doc.comments.send", ...doc });
+    const message = messages.at(-1)!.content;
+    assert.match(message, /^comments on the RFC\nPlan: "Metering v2"/);
+    assert.ok(message.includes(join(dir, "artifacts", "rfc.md")));
+    plan.answerDocComments("artifact", "rfc", [{ commentId: "K1", status: "done", reply: "Moved metering into the API." }]);
+    assert.equal(plan.state.plan!.artifacts.rfc!.comments![0].status, "done");
+
+    await plan.handleAction({ type: "doc.edit", ...doc, markdown: "# RFC\n\nWe meter in the API.\n" });
+    await plan.flush();
+    assert.equal(readFileSync(join(dir, "artifacts", "rfc.md"), "utf8"), "# RFC\n\nWe meter in the API.\n");
+    await assert.rejects(plan.handleAction({ type: "doc.edit", docKind: "finding", docId: "N1", markdown: "x" }), /unknown node "N1"/);
+  } finally {
+    await close();
+  }
+});
+
+test("starting research records the request, and the agent's run, findings and proposal answer it in the thread", async () => {
+  const { plan, worktree, messages, close } = setup();
+  try {
+    await plan.open({ worktree, title: "Metering v2", slug: "metering-v2" });
+    plan.map({ nodes: [{ type: "research", title: "What does the billing API accept?" }] });
+    await assert.rejects(plan.handleAction({ type: "node.work", nodeId: "N1", kind: "propose" }), /no findings to propose a decision from yet/);
+    await plan.handleAction({ type: "node.work", nodeId: "N1", kind: "research", focus: "check batch limits" });
+    assert.match(messages.at(-1)!.content, /^research N1\n.*\nFocus: check batch limits\nResearch N1 .*Then propose the decision right away/s);
+    const thread = () => plan.state.plan!.nodes[0].thread.map((m) => `${m.role}: ${m.text}`);
+    assert.deepEqual(thread(), ["user: Asked an agent to research this: check batch limits"]);
+    plan.node("N1", { run: { status: "running", note: "reading the docs", runIds: ["r1"] } });
+    plan.node("N1", { run: { status: "done" }, result: { markdown: "Batches of 1,000." } });
+    plan.ask("N1", choice());
+    assert.deepEqual(thread().slice(1), ["agent: Started: reading the docs", "agent: The findings are in.", "agent: Proposed 2 options; I recommend In the API. Pick one above."]);
+  } finally {
+    await close();
+  }
+});

@@ -29,6 +29,8 @@ export interface SurfaceContext<S> {
   remember(ops: PatchOp[]): void;
   /** Wakes the agent; the host prefixes the content with "Surface · <id> · ". The action rides along as the message's details. */
   notifyAgent(content: string, action: SurfaceAction): void;
+  /** Tells the agent on its next turn without starting one, e.g. that the user edited a document. */
+  inform(content: string, action: SurfaceAction): void;
   /** This workflow's page URL. Starts the server, and opens the browser the first time. */
   url(): Promise<string>;
   now(): string;

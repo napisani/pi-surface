@@ -13,7 +13,7 @@ export function DraftSide({ outline, tbds }: { outline: readonly OutlineEntry[];
         <>
           <h4>Sections</h4>
           {outline.map((sec) => (
-            <button key={sec.id} type="button" className={cx(css.section, sec.level === 3 && css.level3)} onClick={() => scrollToMark(sec.id)}>
+            <button key={sec.id} type="button" className={cx(css.section, sec.level === 3 && css.level3)} onClick={() => scrollToMark(sec.id, sec.title)}>
               <span>{sec.title}</span>
               {sec.tbds ? <span className={css.count}>{sec.tbds} TBD</span> : <span className={css.done}>✓</span>}
             </button>
@@ -23,7 +23,7 @@ export function DraftSide({ outline, tbds }: { outline: readonly OutlineEntry[];
       <h4>TBD ({tbds.length})</h4>
       {tbds.length ? (
         tbds.map((t) => (
-          <button key={t.id} type="button" className={css.tbd} onClick={() => scrollToMark(t.id)}>
+          <button key={t.id} type="button" className={css.tbd} onClick={() => scrollToMark(t.id, t.text)}>
             {t.ids.length ? <IdChips ids={t.ids} /> : <Badge tone="err">not asked yet</Badge>}
             <span className={css.what}>{t.text || t.section}</span>
           </button>

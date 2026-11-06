@@ -9,6 +9,7 @@ import { MatrixView } from "./MatrixView.tsx";
 import { SandboxedView } from "./SandboxedView.tsx";
 import { SecondOpinion } from "./SecondOpinion.tsx";
 import { StateMachineView } from "./StateMachineView.tsx";
+import { fenceVisual } from "./richdoc/preview.tsx";
 import { WireframeView } from "./WireframeView.tsx";
 
 afterEach(cleanup);
@@ -92,4 +93,13 @@ test("a second opinion is requested with the chosen model and prompt, then triag
   const ready = renderSurface(<SecondOpinion target={target} opinions={[{ ...opinion("triage"), findings: opinion("triage").findings.map((f) => ({ ...f, verdict: f.verdict === "pending" ? "reject" : f.verdict })) }]} defaults={{ model: null, prompts: [] }} />, {});
   fireEvent.click(screen.getByRole("button", { name: "Send 1 to the author" }));
   assert.deepEqual(ready.posts.at(-1)?.action, { type: "opinion.send", opinionId: "O1" });
+});
+
+test("a document's fenced blocks become visuals by language, with a readable error when the JSON is wrong", () => {
+  assert.deepEqual(fenceVisual("mermaid", "flowchart LR\n a-->b"), { kind: "mermaid", source: "flowchart LR\n a-->b" });
+  assert.deepEqual(fenceVisual("statemachine", '{"states":[{"id":"a","label":"A","initial":true}],"transitions":[]}'), { kind: "stateMachine", states: [{ id: "a", label: "A", initial: true }], transitions: [] });
+  const errorOf = (visual: ReturnType<typeof fenceVisual>) => (visual && "error" in visual ? visual.error : "");
+  assert.match(errorOf(fenceVisual("graph", "{nope")), /graph: not valid JSON/);
+  assert.match(errorOf(fenceVisual("graph", '{"nodes":[],"edges":[]}')), /needs at least one node/);
+  assert.equal(fenceVisual("ts", "const a = 1"), null, "other code stays code");
 });

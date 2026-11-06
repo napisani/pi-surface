@@ -6,6 +6,7 @@ import type { PatchOp } from "../../../src/host/patch.ts";
 import { add, append, at, child, item, remove, replace } from "../../../src/host/ptr.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
 import { validateVisual, type Graph, type LabeledVisual } from "../../../src/kit/code.ts";
+import type { DocComment, DocTarget } from "../../../src/kit/docComments.ts";
 import type { Opinion, ReviewerDefaults } from "../../../src/kit/opinion.ts";
 import { validateOptionSet, type OptionSet } from "../../../src/kit/options.ts";
 import type { ThreadMessage } from "../../../src/kit/thread.ts";
@@ -49,6 +50,8 @@ export interface PlanNode {
   checklist?: { text: string; done: boolean }[];
   run?: RunInfo;
   result?: NodeResult;
+  /** The user's inline comments on the findings. */
+  comments?: DocComment[];
   thread: ThreadMessage[];
   createdAt: string;
   updatedAt: string;
@@ -117,6 +120,8 @@ export interface Slice {
   status: SliceStatus;
   /** The forge spec designed for it, when one was. */
   forgeSpec?: string;
+  /** The user's comments on the brief. */
+  comments?: DocComment[];
 }
 
 export type ArtifactKind = "rfc" | "architecture" | "decisionLog";
@@ -131,6 +136,8 @@ export interface Artifact {
   final: boolean;
   review?: { verdict: "approved" | "changes"; note?: string; at: string };
   at: string;
+  /** The user's inline comments; they survive the agent's revisions. */
+  comments?: DocComment[];
 }
 
 export interface Plan {
@@ -482,8 +489,8 @@ export function checkVisuals(visuals: readonly LabeledVisual[], what: string): v
 export function askNode(state: PlanState, nodeId: string, choice: OptionSet, now: string): PatchOp[] {
   const plan = writable(state);
   const node = nodeOf(plan, nodeId);
-  if (node.type === "research" || node.type === "task") {
-    throw new SurfaceError(`${nodeId} is a ${node.type} node; options belong on discuss and spike nodes`);
+  if (node.type === "task") {
+    throw new SurfaceError(`${nodeId} is a task node; it is settled by its steps, not options`);
   }
   if (node.status === "decided") {
     throw new SurfaceError(`${nodeId} is decided; the user reopens it first`);
@@ -493,7 +500,33 @@ export function askNode(state: PlanState, nodeId: string, choice: OptionSet, now
     throw new SurfaceError(`invalid options for ${nodeId}:\n- ${errors.join("\n- ")}`);
   }
   const p = nodePtr(plan, nodeId);
-  return [add(child(p, "choice"), structuredClone(choice)), replace(child(p, "status"), "open"), replace(child(p, "updatedAt"), now), touch(now)];
+  const recommended = choice.options.find((o) => o.recommended);
+  const note: ThreadMessage = { role: "agent", text: `Proposed ${choice.options.length} options${recommended ? `; I recommend ${recommended.label}` : ""}. Pick one above.`, at: now };
+  return [add(child(p, "choice"), structuredClone(choice)), replace(child(p, "status"), "open"), append(child(p, "thread"), note), replace(child(p, "updatedAt"), now), touch(now)];
+}
+
+export type WorkKind = "options" | "deeper" | "research" | "spike" | "propose";
+
+const WORK_ASKED = {
+  options: "Asked for options to decide between",
+  deeper: "Asked the agent to go deeper",
+  research: "Asked an agent to research this",
+  spike: "Asked agents to spike the approaches",
+  propose: "Asked the agent to propose a decision from the findings",
+} satisfies Record<WorkKind, string>;
+
+/** Ops that record the user's request in the node's thread, so the page shows the agent owes an answer. */
+export function requestWork(state: PlanState, nodeId: string, kind: WorkKind, focus: string | undefined, now: string): PatchOp[] {
+  const plan = writable(state);
+  const node = nodeOf(plan, nodeId);
+  if (node.status !== "open") {
+    throw new SurfaceError(`${nodeId} is ${node.status}; reopen it first`);
+  }
+  if (kind === "propose" && !node.result) {
+    throw new SurfaceError(`${nodeId} has no findings to propose a decision from yet`);
+  }
+  const text = focus ? `${WORK_ASKED[kind]}: ${focus}` : `${WORK_ASKED[kind]}.`;
+  return [append(child(nodePtr(plan, nodeId), "thread"), { role: "user", text, at: now }), touch(now)];
 }
 
 export interface NodeUpdate {
@@ -535,6 +568,12 @@ export function updateNode(state: PlanState, nodeId: string, update: NodeUpdate,
   }
   if (update.run) {
     ops.push(add(child(p, "run"), nextRun(node, update.run, now)));
+    if (update.run.status === "running" && node.run?.status !== "running") {
+      ops.push(append(child(p, "thread"), { role: "agent", text: `Started${update.run.note ? `: ${update.run.note}` : "."}`, at: now }));
+    }
+    if (update.run.status === "failed") {
+      ops.push(append(child(p, "thread"), { role: "agent", text: `The run failed${update.run.note ? `: ${update.run.note}` : "."}`, at: now }));
+    }
   }
   if (update.result) {
     if (!update.result.markdown.trim()) {
@@ -542,6 +581,9 @@ export function updateNode(state: PlanState, nodeId: string, update: NodeUpdate,
     }
     checkVisuals(update.result.visuals ?? [], `${nodeId} result`);
     ops.push(add(child(p, "result"), { markdown: update.result.markdown, visuals: structuredClone(update.result.visuals ?? []), at: now }));
+    if (!update.text?.trim()) {
+      ops.push(append(child(p, "thread"), { role: "agent", text: "The findings are in.", at: now }));
+    }
   }
   if (!ops.length) {
     throw new SurfaceError("give text, visuals, a run update or a result");
@@ -657,6 +699,9 @@ export function setSlices(state: PlanState, inputs: SliceInput[], now: string): 
     if (existing?.forgeSpec && !slice.forgeSpec) {
       slice.forgeSpec = existing.forgeSpec;
     }
+    if (existing?.comments) {
+      slice.comments = existing.comments;
+    }
     return slice;
   });
   const ids = new Set(slices.map((s) => s.id));
@@ -763,7 +808,7 @@ export function postArtifact(state: PlanState, kind: ArtifactKind, markdown: str
   if (!markdown.trim()) {
     throw new SurfaceError("an artifact needs markdown");
   }
-  const artifact: Artifact = { writing: false, markdown, basis: decisionBasis(plan), final, at: now };
+  const artifact: Artifact = { writing: false, markdown, basis: decisionBasis(plan), final, at: now, comments: plan.artifacts[kind]?.comments ?? [] };
   return [add(r("plan", "artifacts", kind), artifact), touch(now)];
 }
 
@@ -803,4 +848,64 @@ export function setReviewer(state: PlanState, input: { model?: string; savePromp
     ops.push(replace(r("plan", "reviewer", "prompts"), plan.reviewer.prompts.filter((p) => p.name !== input.removePrompt)));
   }
   return [...ops, touch(now)];
+}
+
+// ---- documents ----
+
+/** The plan's documents the page renders richly: artifacts and slice briefs (editable) and node findings (read-only). */
+export function planDoc(state: PlanState, kind: string, id: string, dir: string): DocTarget<PlanState> {
+  const plan = writable(state);
+  if (kind === "artifact") {
+    if (!isArtifactKind(id) || !plan.artifacts[id]?.markdown) {
+      throw new SurfaceError(`there is no ${isArtifactKind(id) ? ARTIFACT_NAMES[id] : id} yet`);
+    }
+    const artifact = plan.artifacts[id]!;
+    return {
+      label: `the ${ARTIFACT_NAMES[id]}`,
+      markdown: artifact.markdown,
+      comments: artifact.comments ?? [],
+      list: r("plan", "artifacts", id, "comments"),
+      ensure: artifact.comments ? [] : [add(r("plan", "artifacts", id, "comments"), [])],
+      brief: { content: `${dir}/artifacts/${id}.md`, revise: `edit it and republish it with surface_plan_artifact kind "${id}".` },
+      save: (markdown, now) => [replace(r("plan", "artifacts", id, "markdown"), markdown), touch(now)],
+    };
+  }
+  if (kind === "slice") {
+    const i = plan.slices.findIndex((s) => s.id === id);
+    if (i < 0) {
+      throw new SurfaceError(`unknown slice "${id}"`);
+    }
+    const slice = plan.slices[i];
+    return {
+      label: `the brief for ${slice.id} ${slice.title}`,
+      markdown: slice.brief,
+      comments: slice.comments ?? [],
+      list: r("plan", "slices", i, "comments"),
+      ensure: slice.comments ? [] : [add(r("plan", "slices", i, "comments"), [])],
+      brief: { content: `${dir}/slices/${slice.id}.md (the Brief section)`, revise: `republish the slices with surface_plan_slices, keeping id "${slice.id}" and changing its brief.` },
+      save: (markdown, now) => [replace(r("plan", "slices", i, "brief"), markdown), touch(now)],
+    };
+  }
+  if (kind === "finding") {
+    const node = nodeOf(plan, id);
+    if (!node.result) {
+      throw new SurfaceError(`${id} has no findings yet`);
+    }
+    const p = nodePtr(plan, id);
+    const authors = node.run?.runIds.length ? ` They came from subagent run(s) ${node.run.runIds.join(", ")}; resume them for the revision.` : "";
+    return {
+      label: `the findings on ${node.id} ${node.title}`,
+      markdown: node.result.markdown,
+      comments: node.comments ?? [],
+      list: child(p, "comments"),
+      ensure: node.comments ? [] : [add(child(p, "comments"), [])],
+      brief: { content: `the findings on ${node.id} in ${dir}/decisions/${node.id}.md`, revise: `republish them with surface_plan_node result.${authors}` },
+    };
+  }
+  throw new SurfaceError(`no plan document of kind "${kind}"`);
+}
+
+/** Every comment on every plan document, so new ids stay unique. */
+export function allDocComments(plan: Plan): DocComment[] {
+  return [...ARTIFACT_KINDS.flatMap((k) => plan.artifacts[k]?.comments ?? []), ...plan.slices.flatMap((s) => s.comments ?? []), ...plan.nodes.flatMap((n) => n.comments ?? [])];
 }

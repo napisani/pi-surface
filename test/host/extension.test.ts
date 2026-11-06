@@ -185,5 +185,5 @@ test("the extension registers every workflow's tools under the surface prefix", 
     [...host.tools.values()].filter((t) => t.defaultActive).map((t) => t.name),
     ["surface_forge_ask", "surface_review_open", "surface_feedback_open", "surface_plan_open", "surface_plan_slice_report"],
   );
-  assert.equal(host.tools.size, 34);
+  assert.equal(host.tools.size, 36);
 });

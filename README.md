@@ -115,6 +115,16 @@ it are regenerated on every change. Sessions building a slice report back with
 the `surface_plan_slice_report` tool, which every session has. One session edits
 a plan at a time; another opens it read-only until it takes over.
 
+### Rich documents
+
+Plan artifacts, slice briefs, node findings and forge drafts open as Notion-style
+documents (Milkdown Crepe). Read or switch to Edit: your edits save into the
+document and its file, and the agent hears which sections you changed. Select a
+passage to comment; comments queue in the margin and go to the agent as one batch,
+which revises the document and answers each one. Fenced `mermaid`, `wireframe`
+and JSON `graph`, `matrix`, `stateMachine`, `archDiff` and `heatmap` blocks draw
+as live pictures inside the document.
+
 ### Second opinions
 
 On a plan's nodes, map, architecture, slices and artifacts, a forge question or

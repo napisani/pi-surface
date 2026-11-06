@@ -2,13 +2,13 @@
 // the plan for team buy-in, their approval, and the plan's reviewer defaults.
 import { useState } from "react";
 import { useModels } from "../../../../web/kit/hooks/useModels.ts";
-import { Markdown } from "../../../../web/kit/Markdown.tsx";
 import { Badge } from "../../../../web/kit/primitives/Badge.tsx";
 import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Row } from "../../../../web/kit/primitives/Row.tsx";
 import { Text } from "../../../../web/kit/primitives/Text.tsx";
 import { Working } from "../../../../web/kit/primitives/Working.tsx";
+import { RichDoc } from "../../../../web/kit/RichDoc.tsx";
 import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { ARTIFACT_KINDS, ARTIFACT_NAMES, decisionBasis, type Artifact, type ArtifactKind, type Plan } from "../state.ts";
@@ -73,9 +73,9 @@ function ArtifactCard({ kind, plan }: { kind: ArtifactKind; plan: Plan }) {
       </div>
       {artifact?.writing ? <Working>The agent is writing it.</Working> : null}
       {artifact?.markdown ? (
-        <details className={css.doc} open={Boolean(waiting)}>
-          <summary>Read</summary>
-          <Markdown text={artifact.markdown} />
+        <details className={css.doc} open>
+          <summary>Read, edit and comment</summary>
+          <RichDoc doc={{ kind: "artifact", id: kind, label: `the ${ARTIFACT_NAMES[kind]}` }} markdown={artifact.markdown} comments={artifact.comments ?? []} editable={!artifact.writing} />
         </details>
       ) : null}
       {waiting ? <ReviewBar kind={kind} /> : null}

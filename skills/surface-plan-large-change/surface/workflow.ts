@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import { defineSurfaceTool, defineWorkflow } from "../../../src/host/workflow.ts";
+import { docTools } from "../../../src/kit/docTools.ts";
 import { opinionTools } from "../../../src/kit/opinionTools.ts";
 import { Dimension, Graph, LabeledVisual, Lens, OptionFields } from "../../../src/kit/schemas.ts";
 import { parseAction, type PlanAction } from "./actions.ts";
@@ -232,6 +233,6 @@ export default defineWorkflow<PlanState, PlanAction, PlanSession>({
   emptyState,
   parseAction,
   persistence: "own",
-  tools: [open, map, ask, node, architecture, slices, artifact, ...opinionTools<PlanSession>("plan"), report],
+  tools: [open, map, ask, node, architecture, slices, artifact, ...opinionTools<PlanSession>("plan"), ...docTools<PlanSession>("plan"), report],
   create: (ctx) => new PlanSession(ctx),
 });

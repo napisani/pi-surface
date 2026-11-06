@@ -2,11 +2,9 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { renderSurface } from "../../../../test/web/surface.tsx";
-import { parseDraft } from "../draft.ts";
 import { emptyState, type Draft, type ForgeState, type Question } from "../state.ts";
 import { cacheIsolation } from "../test/fixtures.ts";
 import { ApprovalBar } from "./ApprovalBar.tsx";
-import { DraftDoc } from "./DraftDoc.tsx";
 import { QuestionsView } from "./QuestionsView.tsx";
 
 afterEach(cleanup);
@@ -37,15 +35,6 @@ test("Approve posts draft.review; the RFC option shows only for a spec with no R
   cleanup();
   renderSurface(<ApprovalBar kind="rfc" draft={finalDraft} rfcRequested />, state());
   assert.equal(screen.queryByRole("button", { name: "Approve and write an RFC" }), null);
-});
-
-test("a TBD chip opens its question", () => {
-  const { tree } = parseDraft("## Store\n\nTBD(D4): which store.", "spec");
-  renderSurface(<DraftDoc tree={tree} />, state());
-  fireEvent.click(screen.getByRole("button", { name: "D4" }));
-  const hash = new URLSearchParams(window.location.hash.slice(1));
-  assert.equal(hash.get("view"), "q");
-  assert.equal(hash.get("question"), "D4");
 });
 
 test("picking an option is local until Submit posts the answer with the note", async () => {

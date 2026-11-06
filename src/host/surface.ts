@@ -11,6 +11,8 @@ export interface SurfaceHost {
   persist(entry: OpsEntry): void;
   /** Delivers a page event to the agent, starting a turn if it is idle. */
   notifyAgent(workflow: WorkflowId, content: string, action: SurfaceAction): void;
+  /** Queues a page event for the agent's next turn without starting one; falls back to notifyAgent. */
+  inform?(workflow: WorkflowId, content: string, action: SurfaceAction): void;
   /** Called after every change, e.g. to refresh a status line. */
   changed?(workflow: WorkflowId): void;
   /** Called the first time a workflow's page URL is handed out. */
@@ -87,6 +89,7 @@ export class Surface {
       commit: (ops: PatchOp[]) => apply(ops, definition.persistence !== "own"),
       remember: (ops: PatchOp[]) => apply(ops, true),
       notifyAgent: (content, action) => this.#host.notifyAgent(id, content, action),
+      inform: (content, action) => (this.#host.inform ?? this.#host.notifyAgent)(id, content, action),
       url: async () => {
         const url = await this.url(id);
         if (!this.#opened.has(id)) {

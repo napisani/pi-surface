@@ -6,12 +6,12 @@ import { Button } from "../../../../web/kit/primitives/Button.tsx";
 import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Segmented } from "../../../../web/kit/primitives/Segmented.tsx";
+import { RichDoc } from "../../../../web/kit/RichDoc.tsx";
 import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { copyText } from "../../../../web/kit/toast.ts";
 import { decisionBasis, DRAFT_NAMES, type Draft, type DraftKind, type ForgeState } from "../state.ts";
 import { ApprovalBar } from "./ApprovalBar.tsx";
-import { DraftDoc } from "./DraftDoc.tsx";
 import css from "./DraftPanel.module.css";
 import { DraftSide } from "./DraftSide.tsx";
 import { ForgeBanner } from "./ForgeBanner.tsx";
@@ -99,7 +99,7 @@ export function DraftPanel() {
         {parsed ? (
           <div className={css.body}>
             <DraftSide outline={parsed.outline} tbds={parsed.tbds} />
-            <DraftDoc tree={parsed.tree} />
+            <RichDoc doc={{ kind: "draft", id: kind, label: `the ${name}` }} markdown={markdown} comments={draft?.comments ?? []} editable={!draft?.writing && draft?.review?.verdict !== "approved"} />
           </div>
         ) : (
           <EmptyState title={`No ${name} draft yet.`}>The agent writes it from the decisions so far. Anything not decided yet shows as TBD, linked to its question.</EmptyState>

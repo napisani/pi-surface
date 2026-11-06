@@ -2,6 +2,7 @@ import type { PatchOp } from "../../../src/host/patch.ts";
 import { add, append, at, child, replace } from "../../../src/host/ptr.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
 import { validateOptionSet, type Dimension, type Lens, type Option, type SpecDimension } from "../../../src/kit/options.ts";
+import type { DocComment, DocTarget } from "../../../src/kit/docComments.ts";
 import type { Opinion, ReviewerDefaults } from "../../../src/kit/opinion.ts";
 import type { ThreadMessage as KitMessage } from "../../../src/kit/thread.ts";
 
@@ -61,6 +62,8 @@ export interface Draft {
   path?: string;
   /** The user's verdict on a final draft; cleared when the agent posts it again. */
   review?: DraftReview;
+  /** The user's inline comments; they survive the agent's rewrites. */
+  comments?: DocComment[];
 }
 
 export interface ForgeState {
@@ -302,7 +305,7 @@ export function postDraft(state: ForgeState, kind: DraftKind, markdown: string, 
   if (!markdown.trim()) {
     throw new SurfaceError("a draft needs markdown");
   }
-  const draft: Draft = { writing: false, markdown, basis: decisionBasis(state), at: now, final: options.final ?? false };
+  const draft: Draft = { writing: false, markdown, basis: decisionBasis(state), at: now, final: options.final ?? false, comments: state.drafts[kind]?.comments ?? [] };
   if (options.path) {
     draft.path = options.path;
   }
@@ -343,3 +346,28 @@ function putDecision(state: ForgeState, decision: Decision): PatchOp[] {
   const di = state.decisions.findIndex((d) => d.id === decision.id);
   return [di < 0 ? append(s("decisions"), decision) : replace(s("decisions", di), decision)];
 }
+
+/** A spec or RFC draft as a document the user comments on and edits. */
+export function draftDoc(state: ForgeState, kind: string, id: string): DocTarget<ForgeState> {
+  if (kind !== "draft" || (id !== "spec" && id !== "rfc")) {
+    throw new SurfaceError(`no forge document "${kind}/${id}"`);
+  }
+  const draft = state.drafts[id];
+  if (!draft?.markdown) {
+    throw new SurfaceError(`there is no ${DRAFT_NAMES[id]} yet`);
+  }
+  return {
+    label: `the ${DRAFT_NAMES[id]}`,
+    markdown: draft.markdown,
+    comments: draft.comments ?? [],
+    list: s("drafts", id, "comments"),
+    ensure: draft.comments ? [] : [add(s("drafts", id, "comments"), [])],
+    brief: {
+      content: draft.path ? `the ${DRAFT_NAMES[id]} at ${draft.path}` : `the ${DRAFT_NAMES[id]} on the forge Overview`,
+      revise: `edit it${draft.path ? ` at ${draft.path}` : ""} and republish it with surface_forge_draft kind "${id}".`,
+    },
+    save: (markdown) => [replace(s("drafts", id, "markdown"), markdown)],
+  };
+}
+
+export const allDraftComments = (state: ForgeState): DocComment[] => [...(state.drafts.spec?.comments ?? []), ...(state.drafts.rfc?.comments ?? [])];

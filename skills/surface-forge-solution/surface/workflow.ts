@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import { defineSurfaceTool, defineWorkflow } from "../../../src/host/workflow.ts";
+import { docTools } from "../../../src/kit/docTools.ts";
 import { opinionTools } from "../../../src/kit/opinionTools.ts";
 import { Dimension, Lens, OptionFields as KitOptionFields } from "../../../src/kit/schemas.ts";
 import { parseAction, type ForgeAction } from "./actions.ts";
@@ -121,6 +122,6 @@ export default defineWorkflow<ForgeState, ForgeAction, ForgeSession>({
   title: "forge",
   emptyState: () => emptyState(),
   parseAction,
-  tools: [ask, reply, rfc, draft, ...opinionTools<ForgeSession>("forge")],
+  tools: [ask, reply, rfc, draft, ...opinionTools<ForgeSession>("forge"), ...docTools<ForgeSession>("forge")],
   create: (ctx) => new ForgeSession(ctx),
 });

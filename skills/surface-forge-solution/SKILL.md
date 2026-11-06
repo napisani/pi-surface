@@ -101,6 +101,15 @@ The user can ask another model to review a question's options or a draft. The me
 
 A second opinion never changes an answer the user gave.
 
+### Comments and edits on drafts
+
+The Overview renders each draft as a document the user can comment on and edit.
+
+- **comments on the tech spec / RFC**: each comment quotes the passage it is about. Revise the draft for each and republish it with `surface_forge_draft`, then answer every comment with `surface_forge_doc_comments`: done, declined with why, or needs-input with your question.
+- **the user edited the tech spec / RFC**: their text is now the draft. Write it to the draft's file so the two match, and keep their wording when you next revise it.
+
+Fenced ` ```mermaid ` blocks, ` ```wireframe ` blocks, and ` ```graph `, ` ```matrix `, ` ```stateMachine `, ` ```archDiff ` and ` ```heatmap ` blocks holding one JSON object of that visual's fields draw as pictures inside a draft.
+
 ## Phase 1 — Frame (highest-leverage questions first)
 
 Understand the problem before interrogating the design.

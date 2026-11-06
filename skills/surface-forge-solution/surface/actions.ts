@@ -3,12 +3,15 @@ import { decodeAction, trimmed, type Json } from "../../../src/host/decode.ts";
 import { applyPatch, type PatchOp } from "../../../src/host/patch.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
 import type { OpinionTarget, TargetInfo } from "../../../src/kit/opinion.ts";
+import { DOC_ACTIONS, isDocAction, resolveDocAction, type DocAction, type DocScope } from "../../../src/kit/docActions.ts";
 import { isOpinionAction, OPINION_ACTIONS, resolveOpinionAction, type OpinionScope } from "../../../src/kit/opinionActions.ts";
 import {
   addThreadMessage,
   awaitingApproval,
   deferQuestion,
   DRAFT_NAMES,
+  allDraftComments,
+  draftDoc,
   opinionsPtr,
   openInRound,
   recordAnswer,
@@ -41,6 +44,7 @@ const ACTIONS = {
   draft: action("draft", { kind: Kind }),
   "draft.review": action("draft.review", { kind: Kind, verdict: Type.Enum(["approve", "approveWithRfc", "changes"]), note: OptionalText }),
   ...OPINION_ACTIONS,
+  ...DOC_ACTIONS,
 };
 
 export type ForgeAction = Static<(typeof ACTIONS)[keyof typeof ACTIONS]>;
@@ -145,6 +149,8 @@ export function reviewMessage(after: ForgeState, kind: DraftKind, verdict: Verdi
 export interface Resolution {
   ops: PatchOp[];
   message?: AgentMessage;
+  /** The user edited a draft's text on the page; the file at path is now behind it. */
+  edited?: { key: string; label: string; before: string; after: string; path?: string };
 }
 
 /** What a second opinion on a forge question or draft reviews, and how its author revises it. */
@@ -179,7 +185,18 @@ function opinionScope(state: ForgeState): OpinionScope<ForgeState> {
   };
 }
 
+/** Comments on and edits to a spec or RFC draft. */
+function resolveDoc(state: ForgeState, action: DocAction, now: string): Resolution {
+  const scope: DocScope<ForgeState> = { doc: (kind, id) => draftDoc(state, kind, id), allComments: () => allDraftComments(state), tool: "surface_forge_doc_comments" };
+  const { ops, message, edited } = resolveDocAction(scope, action, now);
+  const path = action.docId === "spec" || action.docId === "rfc" ? state.drafts[action.docId]?.path : undefined;
+  return { ops, message: message ? { content: message, details: action } : undefined, edited: edited ? { key: `${action.docKind}:${action.docId}`, ...edited, path } : undefined };
+}
+
 export function resolveAction(state: ForgeState, action: ForgeAction, now: string): Resolution {
+  if (isDocAction(action)) {
+    return resolveDoc(state, action, now);
+  }
   if (isOpinionAction(action)) {
     const { ops, message } = resolveOpinionAction(opinionScope(state), action, now);
     return { ops, message: message ? { content: message, details: action } : undefined };

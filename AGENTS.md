@@ -26,9 +26,15 @@ Workflows today:
   threads, tasks, request rounds and GitHub drafts; code refs, revisions and
   visuals (including the wireframe parser and the sandboxed-view document);
   option validation; second opinions (`opinion.ts` state and agent messages,
-  `opinionActions.ts` page actions, `opinionTools.ts` the agent tools); git
+  `opinionActions.ts` page actions, `opinionTools.ts` the agent tools);
+  document comments and edits (`docText.ts` text-quote anchors,
+  `docComments.ts`, `docActions.ts`, `docTools.ts`, `docEdits.ts`); git
   helpers and the blob route; TypeBox schemas; prop types for the component
   catalog.
+- `web/kit/RichDoc.tsx` — the Notion-style document: read and edit modes on
+  Milkdown Crepe with markdown as the source of truth, inline comments that go
+  to the agent as a batch, and fenced `mermaid`, `wireframe` and JSON visual
+  blocks (`graph`, `matrix`, `stateMachine`, `archDiff`, `heatmap`) drawn live.
 - `web/kit/` — the React page kit: `shell.tsx` (`mountWorkflow`: the state
   stream, the store, toasts, the outer error boundary), `store.ts` (the page
   store, `SurfaceProvider`, `createSurfaceHooks<S, A>()`, `usePending`),
@@ -100,9 +106,11 @@ kit when it renders a general dev concept.
   git, revisions the page lacks are refused, and working-tree reads resolve
   symlinks and stay inside the worktree.
 - Markdown from the agent or GitHub never becomes raw HTML: react-markdown
-  runs without `rehype-raw`, the forge draft is parsed to a syntax tree with
-  raw HTML dropped (`surface/draft.ts`), and `dangerouslySetInnerHTML` appears
-  nowhere. Mermaid's strict-mode SVG is the one string set as `innerHTML`.
+  runs without `rehype-raw`, `RichDoc` (Milkdown) renders raw HTML in markdown
+  as escaped text, and `dangerouslySetInnerHTML` appears nowhere. Mermaid's
+  strict-mode SVG is the one string set as `innerHTML`. `RichDoc` previews
+  hand the code-block view a placeholder and mount React into it, because
+  that view sanitizes and copies preview HTML, which would freeze them.
   The one place agent-written HTML runs is a `view` visual: `SandboxedView`
   puts it in an iframe with `sandbox="allow-scripts"` and no same-origin, under
   a no-network content policy injected ahead of the agent's markup
@@ -139,8 +147,11 @@ kit when it renders a general dev concept.
 - Navigation state (tab, selected item, step) lives in the URL hash, so a
   reload lands in the same place; view preferences live in localStorage under
   `surface:v1:`.
-- `web/kit/theme.css` is the only global CSS: custom properties, a reset and
-  base element styles. Everything else is a CSS module.
+- `web/kit/theme.css` is the only global CSS of our own: custom properties, a
+  reset and base element styles. Everything else is a CSS module. The one
+  vendor stylesheet is the Milkdown Crepe theme `RichDoc.tsx` imports, scoped
+  to `.milkdown` and recolored from our palette in `RichDoc.module.css`; the
+  editor's code loads lazily from `web/kit/richdoc/`.
 - React code follows the applicable rules of the `vercel-react-best-practices`
   skill in `.agents/skills/`: no barrel files, mermaid loaded lazily, one
   shared listener per global event, ternaries rather than `&&` in JSX, no
@@ -152,7 +163,7 @@ kit when it renders a general dev concept.
 npm ci && npm run check             # typecheck + bundle + node --test + test:web
 npm run test:web                    # component tests: tsx loader, happy-dom, Testing Library
 npm run lint                        # oxlint with the shared catalog (pub/lint/rules.yaml)
-node scripts/dev-server.ts          # click through a page without Pi (DEV_WORKFLOW=forge|review|feedback)
+node scripts/dev-server.ts          # click through a page without Pi (DEV_WORKFLOW=forge|review|feedback|plan)
 SMOKE_WORKFLOW=review node scripts/smoke-rpc.ts   # live: spends model calls
 pi -e ./extension/index.ts --skill ./skills/surface-code-review
 ```
@@ -163,8 +174,13 @@ only erasable syntax is allowed there and those files must not contain JSX;
 pure page logic (`lineItems.ts`, `stage.ts`, `draft.ts`, `diffItems.ts`) is
 tested that way. `npm run test:web` runs `*.test.tsx` next to the components
 through tsx, with `test/web/dom.ts` registering happy-dom and stubbing CSS
-imports (a module's class names read back as their keys). Pierre and mermaid
-rendering are checked by hand on the dev server, not in tests.
+imports (a module's class names read back as their keys). Pierre, mermaid
+and the Milkdown editor are checked by hand on the dev server, not in tests.
+
+`tsc` resolves modules the way the bundler does (`moduleResolution: Bundler`):
+Milkdown's type declarations use extensionless relative imports that NodeNext
+cannot follow. Node still runs every `.ts` file directly, so a relative import
+without its `.ts` extension fails the tests.
 
 In the development monorepo, lint config is generated: edit
 `pub/lint/rules.yaml` and run

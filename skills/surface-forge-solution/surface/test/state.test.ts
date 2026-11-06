@@ -145,7 +145,7 @@ test("a draft keeps its old markdown while rewriting and records the decisions i
   run(state, postRound(state, [cacheIsolation()]));
   run(state, recordAnswer(state, "D7", "isolate", undefined, NOW));
   run(state, postDraft(state, "spec", "# Spec\nTBD(D8): cache backend", NOW));
-  assert.deepEqual(state.drafts.spec, { writing: false, markdown: "# Spec\nTBD(D8): cache backend", basis: { D7: "isolate" }, at: NOW, final: false });
+  assert.deepEqual(state.drafts.spec, { writing: false, markdown: "# Spec\nTBD(D8): cache backend", basis: { D7: "isolate" }, at: NOW, final: false, comments: [] });
 
   run(state, reopenDecision(state, "D7"));
   run(state, requestDraft(state, "spec", NOW));

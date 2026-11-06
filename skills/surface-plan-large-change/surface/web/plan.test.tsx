@@ -32,13 +32,16 @@ test("the Decision tab decides a node by its picked option, and blocks one whose
 
   location.hash = "#node=N2";
   renderSurface(<DecisionView />, state([node("N1", { choice: choice() }), node("N2", { blockedBy: ["N1"] })]));
-  assert.ok(screen.getByText(/waits on/));
-  assert.equal(screen.getByRole<HTMLButtonElement>("button", { name: "Decide" }).disabled, true);
+  assert.equal(screen.getAllByText("Waiting on other decisions").length, 2, "the rail's group and the node's state say it");
+  assert.ok(screen.getByRole("button", { name: /^N1 2 options to choose from$/ }), "its blocker is named with what that blocker needs");
+  assert.ok(screen.getByText("Next: decide what this waits on"));
+  assert.equal(screen.queryByRole("button", { name: "Decide" }), null, "nothing to decide until N1 is");
 });
 
 test("a node without options is decided in words; a task waits for its steps", async () => {
   location.hash = "#node=N1";
   const { posts } = renderSurface(<DecisionView />, state([node("N1")]));
+  fireEvent.click(screen.getByRole("button", { name: "Or decide it yourself" }));
   fireEvent.change(screen.getByPlaceholderText("What was decided, in a sentence"), { target: { value: "Postgres, partitioned by day" } });
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Decide" })));
   assert.deepEqual(posts.at(-1)?.action, { type: "node.decide", nodeId: "N1", text: "Postgres, partitioned by day", note: "" });
@@ -49,6 +52,35 @@ test("a node without options is decided in words; a task waits for its steps", a
   assert.equal(screen.getByRole<HTMLButtonElement>("button", { name: "Mark done" }).disabled, true);
   fireEvent.click(screen.getByLabelText("Request access"));
   assert.deepEqual(task.posts.at(-1)?.action, { type: "node.check", nodeId: "N3", index: 0, done: true });
+});
+
+test("an AFK research node says what to start, and its findings lead to a proposed decision", async () => {
+  location.hash = "#node=N1";
+  const research = node("N1", { type: "research", mode: "AFK" });
+  const { posts } = renderSurface(<DecisionView />, state([research]));
+  assert.ok(screen.getByText("Next: start the agent"));
+  fireEvent.change(screen.getByPlaceholderText(/^Optional: what to look into/), { target: { value: "batch limits" } });
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Start the research" })));
+  assert.deepEqual(posts.at(-1)?.action, { type: "node.work", nodeId: "N1", kind: "research", focus: "batch limits" });
+  cleanup();
+
+  const found = { ...research, result: { markdown: "Batches of 1,000.", visuals: [], at: "t" }, thread: [{ role: "agent" as const, text: "The findings are in.", at: "t" }] };
+  const next = renderSurface(<DecisionView />, state([found]));
+  assert.ok(screen.getByText("Next: turn the findings into a decision"));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Have the agent propose a decision" })));
+  assert.deepEqual(next.posts.at(-1)?.action, { type: "node.work", nodeId: "N1", kind: "propose", focus: "" });
+});
+
+test("switching nodes replaces everything the last node showed", async () => {
+  location.hash = "#node=N1";
+  renderSurface(<DecisionView />, state([node("N1", { choice: choice(), visuals: [{ kind: "code", label: "Snippet", text: "a" }] }), node("N2")]));
+  assert.equal(screen.queryAllByText("Snippet").length, 1);
+  await act(async () => {
+    location.hash = "#node=N2";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  assert.equal(screen.queryAllByText("Snippet").length, 0);
+  assert.equal(screen.queryAllByText("At the edge").length, 0);
 });
 
 test("a decided node shows its decision and can be reopened", () => {

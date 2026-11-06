@@ -45,7 +45,8 @@ Each user action on the page arrives as a message starting `Surface · plan ·`,
 | decided Nn | Update the map: graduate fog the decision clears, add questions it makes askable, revise nodes it changes. Then move the frontier as in step 2.4. | `surface_plan_map`, then `surface_plan_ask` |
 | reopened Nn | The old answer is gone; do not design around it. Ask what changed, re-pose the options, and name the downstream nodes and slices it may invalidate. | `surface_plan_ask`, `surface_plan_node` |
 | question about Nn | Answer from the code and findings in two to five sentences; add a visual when structure explains it better. | `surface_plan_node` text |
-| options / deeper / research / spike Nn | Per [references/nodes.md](references/nodes.md). | `surface_plan_ask`, `surface_plan_node` |
+| options / deeper / research / spike Nn | Per [references/nodes.md](references/nodes.md). The user's instructions arrive as `Focus:`; follow them. | `surface_plan_ask`, `surface_plan_node` |
+| propose Nn | Turn the node's findings into options, the one they support recommended, each pro and con citing a finding. | `surface_plan_ask` |
 | clarify fog Fn | Phrase it as a node if it can be asked precisely now; otherwise leave it and say what it waits on. | `surface_plan_map` |
 | work the frontier | Start AFK runs, then post the most leveraged HIL node's options. | `surface_plan_node`, `surface_plan_ask` |
 | update the architecture | Step 4. | `surface_plan_architecture` |
@@ -53,6 +54,8 @@ Each user action on the page arrives as a message starting `Surface · plan ·`,
 | design Sn in forge | Start a forge session for the slice with its relied-on decisions locked; record the approved spec's path on the slice. | `surface_forge_ask`, then `surface_plan_slices` |
 | write the RFC / architecture doc / decision log | Step 6. | `surface_plan_artifact` |
 | second opinion On · corrections · question about On.k | Per [Second opinions](#second-opinions). | `surface_plan_opinion`, `surface_plan_opinion_update` |
+| comments on the RFC / a slice's brief / a node's findings | The user's inline comments, each quoting the passage it is about. Revise the document for each (republish it with the tool the message names), then answer every comment: done, declined with why, or needs-input with your question. | the publishing tool, then `surface_plan_doc_comments` |
+| the user edited a document | No reply needed. Their text is now the document; read it before you next change it, and keep their wording. | — |
 
 Every option and finding you post carries visuals chosen per [references/visuals.md](references/visuals.md).
 

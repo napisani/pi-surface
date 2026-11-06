@@ -296,7 +296,40 @@ async function startPlan(): Promise<string> {
     { title: "Usage store and backfill", deliverable: "A usage table filled from the stream and 90 days of logs.", acceptance: ["Backfill is idempotent"], touches: ["db/migrations", "jobs/backfill"], dependsOn: ["S1"], size: "L", mode: "HIL", decisions: ["N4"], brief: "Partition by day." },
     { title: "Billing export reads the store", deliverable: "The export reads usage from the store.", acceptance: ["Invoices match the old path for a month"], touches: ["billing/export"], dependsOn: ["S2"], size: "S", mode: "AFK", decisions: ["N4"], brief: "Run both paths and diff before switching." },
   ]);
-  await plan.artifact("rfc", "# Usage metering v2\n\n## Problem\nUsage is summed nightly from logs, so invoices lag a day and miss rejected requests.\n\n## Decision so far\nTBD(N1): where metering runs.\n", false);
+  await plan.artifact(
+    "rfc",
+    [
+      "# Usage metering v2",
+      "",
+      "## Problem",
+      "Usage is summed nightly from logs, so invoices lag a day and miss rejected requests.",
+      "",
+      "## Proposal",
+      "Meter each request in the API middleware, after auth, and stream the events to a usage store the billing export reads.",
+      "",
+      "```mermaid",
+      "sequenceDiagram",
+      "  participant C as client",
+      "  participant A as API",
+      "  participant M as meter",
+      "  C->>A: request",
+      "  A->>M: count(tenant)",
+      "  A-->>C: response",
+      "```",
+      "",
+      "## Delivery",
+      "",
+      "```graph",
+      JSON.stringify({ nodes: [{ id: "S1", label: "S1 Meter middleware", tone: "active" }, { id: "S2", label: "S2 Usage store" }, { id: "S3", label: "S3 Billing export" }], edges: [{ from: "S1", to: "S2" }, { from: "S2", to: "S3" }] }),
+      "```",
+      "",
+      "## Open questions",
+      "- TBD(N1): where metering runs.",
+      "- TBD(N4): how usage is stored for the backfill.",
+      "",
+    ].join("\n"),
+    false,
+  );
   await plan.flush();
   agent = (sent) => {
     // SAFETY: the dev server runs one workflow, so every action it hears is that workflow's.
@@ -312,11 +345,18 @@ async function startPlan(): Promise<string> {
       }, 1500);
     } else if (action.type === "opinion.ask") {
       later(() => plan.updateOpinion(action.opinionId, { replies: [{ findingId: action.findingId, text: "Tenant ids arrive only after auth, which runs in the API." }] }));
-    } else if (action.type === "node.work" && action.kind === "research") {
+    } else if (action.type === "node.work" && (action.kind === "research" || action.kind === "spike")) {
       later(() => plan.node(action.nodeId, { run: { status: "running", note: "research subagent started", runIds: ["run-20"] } }), 400);
       later(() => plan.node(action.nodeId, { run: { status: "done", note: "3 sources" }, result: { markdown: "The provider accepts batches of up to 1,000 events, idempotent by event id [docs](https://example.invalid).", visuals: [{ kind: "matrix", label: "Limits", rows: ["Batch size", "Rate", "Idempotency"], columns: ["Provider", "Need"], cells: [[{ value: "1,000" }, { value: "500", tone: "good" }], [{ value: "100/s" }, { value: "4/s", tone: "good" }], [{ value: "event id" }, { value: "required", tone: "warn" }]] }] } }), 2500);
+    } else if (action.type === "node.work" && action.kind === "propose") {
+      later(() => plan.ask(action.nodeId, choice()), 1200);
     } else if (action.type === "artifact.request") {
       later(() => void plan.artifact(action.kind, `# ${action.kind}\n\nWritten from ${plan.state.plan!.decisions.length} decisions.`, true));
+    } else if (action.type === "doc.comments.send") {
+      later(() => {
+        const comments = plan.state.plan!.artifacts.rfc?.comments ?? [];
+        plan.answerDocComments(action.docKind, action.docId, comments.filter((c) => c.status === "sent").map((c) => ({ commentId: c.id, status: "done" as const, reply: "Reworded that passage." })));
+      }, 1500);
     } else if (action.type === "node.ask") {
       later(() => plan.node(action.nodeId, { text: "The API runs auth, so it is the first place the tenant is known." }));
     }

@@ -117,6 +117,11 @@ export function registerSurface(pi: ExtensionAPI, workflows: AnyWorkflow[] = WOR
             { customType: MESSAGE_TYPE, content: `Surface · ${workflow} · ${content}`, display: true, details: { workflow, action } },
             { triggerTurn: true, deliverAs: "followUp" },
           ),
+        inform: (workflow, content, action) =>
+          pi.sendMessage<SurfaceMessageDetails>(
+            { customType: MESSAGE_TYPE, content: `Surface · ${workflow} · ${content}`, display: true, details: { workflow, action } },
+            { triggerTurn: false, deliverAs: "nextTurn" },
+          ),
         changed: (id) => {
           current = id;
           refreshStatus(id);

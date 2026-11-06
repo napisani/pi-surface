@@ -28,6 +28,7 @@
     "check": "npm run typecheck && npm run build && npm test && npm run test:web"
   },
   "dependencies": {
+    "@milkdown/crepe": "7.23.0",
     "@pierre/diffs": "1.6.1",
     "esbuild": "0.28.2",
     "hast-util-to-jsx-runtime": "2.3.6",

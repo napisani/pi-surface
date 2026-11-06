@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import type { Graph, GraphTone } from "../../../../src/kit/code.ts";
 import { GraphView } from "../../../../web/kit/GraphView.tsx";
-import { Markdown } from "../../../../web/kit/Markdown.tsx";
 import { Badge } from "../../../../web/kit/primitives/Badge.tsx";
 import { Banner } from "../../../../web/kit/primitives/Banner.tsx";
 import { Button } from "../../../../web/kit/primitives/Button.tsx";
@@ -11,6 +10,7 @@ import { EmptyState } from "../../../../web/kit/primitives/EmptyState.tsx";
 import { Panel } from "../../../../web/kit/primitives/Panel.tsx";
 import { Row } from "../../../../web/kit/primitives/Row.tsx";
 import { Text } from "../../../../web/kit/primitives/Text.tsx";
+import { RichDoc } from "../../../../web/kit/RichDoc.tsx";
 import { SecondOpinion } from "../../../../web/kit/SecondOpinion.tsx";
 import { usePending } from "../../../../web/kit/store.ts";
 import { SLICE_STATUSES, type Plan, type Slice, type SliceStatus } from "../state.ts";
@@ -72,8 +72,8 @@ function SliceCard({ slice: s, plan }: { slice: Slice; plan: Plan }) {
         ))}
       </Row>
       <details>
-        <summary>Brief</summary>
-        <Markdown text={s.brief} />
+        <summary>Brief{s.comments?.some((c) => c.status === "pending" || c.status === "needs-input") ? " · comments waiting" : ""}</summary>
+        <RichDoc doc={{ kind: "slice", id: s.id, label: `the brief for ${s.id}` }} markdown={s.brief} comments={s.comments ?? []} editable />
       </details>
       {reports.map((p) => (
         <Banner key={p.id} tone={p.status === "blocked" || p.deviations.length ? "warn" : "info"}>

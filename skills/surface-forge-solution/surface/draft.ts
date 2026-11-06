@@ -1,6 +1,7 @@
 // Parses a spec or RFC draft once: markdown to an HTML syntax tree with each
 // TBD(D4) marker turned into a span, plus the h2/h3 outline with TBD counts and
-// the list of markers. DraftDoc renders the tree; nothing here builds HTML text.
+// the list of markers. The Overview's outline and TBD list read the outline and
+// markers; nothing here builds HTML text.
 import type { Element, ElementContent, Root, RootContent, Text } from "hast";
 import { toHast } from "mdast-util-to-hast";
 import remarkGfm from "remark-gfm";

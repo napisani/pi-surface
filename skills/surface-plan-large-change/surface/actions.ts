@@ -4,9 +4,12 @@ import { decodeAction, inArea, trimmed, type Json } from "../../../src/host/deco
 import type { PatchOp } from "../../../src/host/patch.ts";
 import { SurfaceError } from "../../../src/host/workflow.ts";
 import type { OpinionTarget, TargetInfo } from "../../../src/kit/opinion.ts";
+import { DOC_ACTIONS, isDocAction, resolveDocAction, type DocScope } from "../../../src/kit/docActions.ts";
 import { isOpinionAction, OPINION_ACTIONS, resolveOpinionAction, type OpinionScope } from "../../../src/kit/opinionActions.ts";
 import {
   acknowledgeReport,
+  allDocComments,
+  planDoc,
   approveSlices,
   ARTIFACT_NAMES,
   askAbout,
@@ -21,6 +24,7 @@ import {
   opinionsPtr,
   reopen,
   requestArtifact,
+  requestWork,
   reviewArtifact,
   setReviewer,
   setSliceStatus,
@@ -49,7 +53,7 @@ const ACTIONS = {
   "node.defer": action("node.defer", { nodeId: Id }),
   "node.reopen": action("node.reopen", { nodeId: Id }),
   "node.ask": action("node.ask", { nodeId: Id, text: Text }),
-  "node.work": action("node.work", { nodeId: Id, kind: Type.Enum(["options", "deeper", "research", "spike"]), focus: OptionalText }),
+  "node.work": action("node.work", { nodeId: Id, kind: Type.Enum(["options", "deeper", "research", "spike", "propose"]), focus: OptionalText }),
   "node.check": action("node.check", { nodeId: Id, index: Type.Integer({ minimum: 0 }), done: Type.Boolean() }),
   "fog.clarify": action("fog.clarify", { fogId: Id }),
   "map.next": action("map.next", { focus: OptionalText }),
@@ -69,6 +73,7 @@ const ACTIONS = {
   "lock.takeOver": action("lock.takeOver", {}),
   refresh: action("refresh", {}),
   ...OPINION_ACTIONS,
+  ...DOC_ACTIONS,
 };
 
 export type PlanAction = Static<(typeof ACTIONS)[keyof typeof ACTIONS]>;
@@ -101,6 +106,8 @@ export interface Resolution {
   ops: PatchOp[];
   message?: string;
   effect?: Effect;
+  /** The user edited a document's text. */
+  edited?: { kind: string; id: string; label: string; before: string; after: string };
 }
 
 export const planLine = (plan: Plan, ref: PlanRef) => `Plan: "${plan.title}" (${plan.slug}) · files ${ref.dir} · worktree ${ref.worktree}`;
@@ -160,7 +167,9 @@ const WORK = {
   options: (line: string) => `Put options on ${line} with surface_plan_ask: 2-4 options, lenses that make the choice clear, and trade-off scores. End your turn after.`,
   deeper: (line: string) => `Go deeper on ${line}: find what the current options or findings miss, add visuals with surface_plan_node, and revise the options with surface_plan_ask if they change.`,
   research: (line: string) =>
-    `Research ${line}: launch one async research subagent with a sharp brief (the question, what is already decided, what would change the answer). Report it running with surface_plan_node run (runIds), keep working other nodes, and publish its cited findings with surface_plan_node result when it returns.`,
+    `Research ${line}: launch one async research subagent with a sharp brief (the question, what is already decided, what would change the answer, and the user's focus if given). Report it running with surface_plan_node run (runIds), keep working other nodes, and publish its cited findings with surface_plan_node result when it returns. Then propose the decision right away: post options with surface_plan_ask, the one the findings support recommended, each pro and con citing the finding behind it.`,
+  propose: (line: string) =>
+    `Propose the decision for ${line} from its findings: read them, then post 2-4 options with surface_plan_ask, the one the findings support recommended, each pro and con citing the finding behind it. If the findings leave a gap that matters, say so with surface_plan_node and suggest the follow-up research or spike instead of guessing.`,
   spike: (line: string) =>
     "Spike " +
     line +
@@ -208,7 +217,7 @@ function resolveNode(state: PlanState, a: Extract<PlanAction, { type: `node.${st
       };
     }
     case "node.work":
-      return { ops: [], message: [head(`${a.kind} ${a.nodeId}`), ...(a.focus ? [`Focus: ${a.focus}`] : []), WORK[a.kind](nodeLine(plan, a.nodeId))].join("\n") };
+      return { ops: requestWork(state, a.nodeId, a.kind, a.focus, now), message: [head(`${a.kind} ${a.nodeId}`), ...(a.focus ? [`Focus: ${a.focus}`] : []), WORK[a.kind](nodeLine(plan, a.nodeId))].join("\n") };
     case "node.check":
       return { ops: checkStep(state, a.nodeId, a.index, a.done, now) };
   }
@@ -247,7 +256,7 @@ function resolveSlices(state: PlanState, a: Extract<PlanAction, { type: `slice${
   }
 }
 
-function resolveRest(state: PlanState, a: Exclude<PlanAction, { type: `node.${string}` | `slice${string}` | `opinion.${string}` }>, now: string, head: (title: string) => string, ref: PlanRef): Resolution {
+function resolveRest(state: PlanState, a: Exclude<PlanAction, { type: `node.${string}` | `slice${string}` | `opinion.${string}` | `doc.${string}` }>, now: string, head: (title: string) => string, ref: PlanRef): Resolution {
   const plan = writable(state);
   switch (a.type) {
     case "scope.edit":
@@ -297,6 +306,11 @@ export function resolveAction(state: PlanState, a: PlanAction, now: string): Res
   const plan = writable(state);
   const ref = state.ref!;
   const head = (title: string) => `${title}\n${planLine(plan, ref)}`;
+  if (isDocAction(a)) {
+    const scope: DocScope<PlanState> = { doc: (kind, id) => planDoc(state, kind, id, ref.dir), allComments: () => allDocComments(plan), tool: "surface_plan_doc_comments" };
+    const { ops, message, edited } = resolveDocAction(scope, a, now);
+    return { ops, message: message ? message.replace("\n", `\n${planLine(plan, ref)}\n`) : undefined, edited: edited ? { kind: a.docKind, id: a.docId, ...edited } : undefined };
+  }
   if (isOpinionAction(a)) {
     const { ops, message } = resolveOpinionAction(opinionScope(state, ref), a, now);
     return { ops, message: message ? message.replace("\n", `\n${planLine(plan, ref)}\n`) : undefined };

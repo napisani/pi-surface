@@ -5,7 +5,7 @@ Every node asks one question. Its type says how it gets settled.
 | Type | Mode | Use when | Settled by |
 |---|---|---|---|
 | `discuss` | HIL | Talking it through and comparing options can settle it. The default. | The user picks an option you posted with `surface_plan_ask`, or decides in words. |
-| `research` | AFK | A fact outside the checkout blocks a decision: an API's limits, a library's behavior, prior art. | A research subagent's cited findings, then the user decides with them in hand. |
+| `research` | AFK | A fact outside the checkout blocks a decision: an API's limits, a library's behavior, prior art. | A research subagent's cited findings, then options you propose from them; the user picks. |
 | `spike` | AFK | Reading cannot settle it; building each approach a little and measuring can. | Worker subagents build each approach in its own worktree; the user picks from the comparison. |
 | `task` | HIL by default | Manual work blocks a decision: access, an account, sample data. Never a slice of the build. | Its checklist is done and the user marks it done. |
 
@@ -28,7 +28,8 @@ Find what the current options or findings miss: an unconsidered option, an assum
 
 1. Launch one async research subagent with a sharp brief: the question, what is already decided, what answer would change the plan, and where to look.
 2. Report it with `surface_plan_node` `run` `running` and its `runIds`, then keep working other nodes; the run wakes you when it finishes.
-3. Publish the cited findings with `surface_plan_node` `result` (markdown plus a `matrix` or `data` visual when they compare). Post options with `surface_plan_ask` if the findings frame a choice; otherwise the user decides in words.
+3. Publish the cited findings with `surface_plan_node` `result` (markdown plus a `matrix` or `data` visual when they compare).
+4. Propose the decision in the same turn: post options with `surface_plan_ask`, the one the findings support recommended, each pro and con citing the finding behind it. The user should never be left to turn raw findings into a decision alone. When the findings leave a gap that matters, say so in the node's thread and suggest the follow-up research or spike instead.
 
 ## Spikes
 
