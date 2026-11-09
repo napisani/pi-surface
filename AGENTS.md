@@ -13,6 +13,7 @@ Workflows today:
 | `surface-code-review` | `review`: diffs, change requests, findings, walkthrough, GitHub comments | `surface_review_open` |
 | `surface-pr-feedback` | `feedback`: triage, fix rounds, commits, pushes, replies | `surface_feedback_open` |
 | `surface-plan-large-change` | `plan`: a multi-session plan's map of decisions, architecture, slices, artifacts | `surface_plan_open` |
+| `surface-reduce-entropy` | `entropy`: simplification findings to accept or decline, their trade-offs, net effect | `surface_entropy_findings` |
 
 ## Layout
 
@@ -163,7 +164,7 @@ kit when it renders a general dev concept.
 npm ci && npm run check             # typecheck + bundle + node --test + test:web
 npm run test:web                    # component tests: tsx loader, happy-dom, Testing Library
 npm run lint                        # oxlint with the shared catalog (pub/lint/rules.yaml)
-node scripts/dev-server.ts          # click through a page without Pi (DEV_WORKFLOW=forge|review|feedback|plan)
+node scripts/dev-server.ts          # click through a page without Pi (DEV_WORKFLOW=forge|review|feedback|plan|entropy)
 SMOKE_WORKFLOW=review node scripts/smoke-rpc.ts   # live: spends model calls
 pi -e ./extension/index.ts --skill ./skills/surface-code-review
 ```

@@ -1,0 +1,12 @@
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
+.facts p{margin:4px 0 0}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--faint)}
+.hint{color:var(--dim);font-size:12px}
+.concept{margin-right:6px;font-size:12px}
+.proscons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px;font-size:13px}
+.proscons b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.proscons ul{margin:4px 0 0;padding-left:18px}
+.proscons li{margin:2px 0;color:var(--ink)}
+.pros b,.pros li::marker{color:var(--green)}
+.cons b,.cons li::marker{color:var(--rose)}
+@media (max-width:900px){.facts,.proscons{grid-template-columns:minmax(0,1fr)}}

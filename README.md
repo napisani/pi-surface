@@ -1,6 +1,6 @@
 # pi-surface
 
-Browser-based design sessions, code review, and PR feedback for [Pi](https://pi.dev).
+Browser-based design sessions, code review, PR feedback, and simplification reviews for [Pi](https://pi.dev).
 The agent works in your checkout. You compare options, read diffs, ask questions,
 and send change requests from a local web page. Page actions start a turn in Pi;
 the agent sends its answers back to the page.
@@ -149,6 +149,21 @@ You can also paste feedback into Pi chat without a GitHub PR.
 
 ![PR feedback page with reviewer threads, code context, a queued fix, and the agent's analysis](docs/images/feedback.png)
 
+### Reduce entropy
+
+```text
+/skill:surface-reduce-entropy src/config/
+```
+
+The agent looks for simplifications in a path or in your current changeset,
+including ones that drop a requirement: a format nobody sends, an option nobody
+sets, a layer with one user. Each finding says what it gives up and who would
+notice, ordered from no concession to a feature removed. Accept or decline each
+one beside its before/after code, pros and cons, and a radar against keeping the
+code; the overview adds up the lines and concepts removed. When every finding is
+decided, press **Send decisions to the agent**. The agent writes the accepted
+ones to a plan under `.scratch/` and leaves the code alone.
+
 These screenshots use the included demo fixtures, not a private repository or a
 live GitHub PR.
 
@@ -252,6 +267,7 @@ Preview a page with demo data and scripted agent replies:
 node scripts/dev-server.ts
 DEV_WORKFLOW=forge node scripts/dev-server.ts
 DEV_WORKFLOW=feedback node scripts/dev-server.ts
+DEV_WORKFLOW=entropy node scripts/dev-server.ts
 ```
 
 Each command prints a local URL. The default page is a local code review;

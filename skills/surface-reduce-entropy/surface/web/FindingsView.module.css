@@ -1,0 +1,12 @@
+.switch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.chip{font-size:12px;padding:3px 9px;border-radius:12px;border:1px solid var(--line);border-left:3px solid var(--amber);color:var(--dim);cursor:pointer;background:none;font-family:inherit}
+.chip.accepted{border-left-color:var(--green)}
+.chip.declined{border-left-color:var(--faint)}
+.chip.on{color:var(--ink);border-color:#625e5a;background:var(--panel2)}
+.status{font-family:var(--mono);font-size:10px;margin-left:6px;color:var(--faint)}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);margin-top:12px}
+.side{display:grid;gap:16px;align-content:start}
+.decide{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}
+.decide input{flex:1}
+.grow{flex:1}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}

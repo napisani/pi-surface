@@ -179,11 +179,11 @@ test("an always-declared tool is active from the start and runs without opening 
 test("the extension registers every workflow's tools under the surface prefix", async () => {
   const host = fakePi();
   registerSurface(host.pi);
-  assert.deepEqual(WORKFLOWS.map((w) => w.id), ["forge", "review", "feedback", "plan"]);
+  assert.deepEqual(WORKFLOWS.map((w) => w.id), ["forge", "review", "feedback", "plan", "entropy"]);
   assert.ok([...host.tools.keys()].every((name) => name.startsWith("surface_")));
   assert.deepEqual(
     [...host.tools.values()].filter((t) => t.defaultActive).map((t) => t.name),
-    ["surface_forge_ask", "surface_review_open", "surface_feedback_open", "surface_plan_open", "surface_plan_slice_report"],
+    ["surface_forge_ask", "surface_review_open", "surface_feedback_open", "surface_plan_open", "surface_plan_slice_report", "surface_entropy_findings"],
   );
-  assert.equal(host.tools.size, 36);
+  assert.equal(host.tools.size, 38);
 });

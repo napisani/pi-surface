@@ -7,6 +7,7 @@
 //   DEV_WORKFLOW=feedback node scripts/dev-server.ts          # a PR with review feedback
 //   DEV_WORKFLOW=feedback DEV_MODE=chat node scripts/dev-server.ts  # local work, feedback from chat
 //   DEV_WORKFLOW=forge node scripts/dev-server.ts             # a design session with a draft
+//   DEV_WORKFLOW=entropy node scripts/dev-server.ts           # simplifications to accept or decline
 /* oxlint-disable no-console -- a dev tool whose output is its console log */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -29,6 +30,9 @@ import feedbackWorkflow from "../skills/surface-pr-feedback/surface/workflow.ts"
 import type { PlanAction } from "../skills/surface-plan-large-change/surface/actions.ts";
 import { choice } from "../skills/surface-plan-large-change/surface/test/fixtures.ts";
 import planWorkflow from "../skills/surface-plan-large-change/surface/workflow.ts";
+import type { EntropyAction } from "../skills/surface-reduce-entropy/surface/actions.ts";
+import { inlineLoader, isoDatesOnly } from "../skills/surface-reduce-entropy/surface/test/fixtures.ts";
+import entropyWorkflow from "../skills/surface-reduce-entropy/surface/workflow.ts";
 
 const workflowId = process.env.DEV_WORKFLOW ?? "review";
 const mode = process.env.DEV_MODE ?? (workflowId === "feedback" ? "pr" : "local");
@@ -37,6 +41,7 @@ const WORKFLOWS = new Map<string, AnyWorkflow>([
   ["review", reviewWorkflow],
   ["feedback", feedbackWorkflow],
   ["plan", planWorkflow],
+  ["entropy", entropyWorkflow],
 ]);
 // Plans are written under a throwaway root so the dev server never touches ~/Work.
 const plansRoot = mkdtempSync(join(tmpdir(), "surface-dev-plans-"));
@@ -364,8 +369,21 @@ async function startPlan(): Promise<string> {
   return url;
 }
 
+async function startEntropy(): Promise<string> {
+  const entropy = surface.typed(entropyWorkflow).session;
+  agent = (sent) => {
+    // SAFETY: the dev server runs one workflow, so every action it hears is that workflow's.
+    const action = sent as EntropyAction;
+    if (action.type === "followUp") {
+      later(() => entropy.reply(action.findingId, "Only the 2019 import fixtures use them; nothing in production."));
+    }
+  };
+  return entropy.post("src/config/ at main", [isoDatesOnly(), inlineLoader()]);
+}
+
 const START = new Map([
   ["plan", startPlan],
+  ["entropy", startEntropy],
   ["forge", startForge],
   ["feedback", startFeedback],
   ["review", startReview],

@@ -99,6 +99,15 @@ Hidden Files tabs stay mounted but have no active keyboard commands.
   A follow-up does not submit an answer or approve a draft.
 - Overview has only app-level commands, not the hidden question's bindings.
 
+## Reduce entropy
+
+- `<leader>fq` picks a finding.
+- Accept and Decline record the decision on the page; a decided finding
+  changes only through its Reopen control. Nothing reaches the agent until
+  **Send decisions to the agent**, in the header, once every finding is
+  decided. Reopening a finding after sending needs another send.
+- `<leader>v?` asks about the active finding without deciding it.
+
 ## User configuration
 
 Create `~/.pi/agent/surface-keybindings.json`. The surface host loads this once

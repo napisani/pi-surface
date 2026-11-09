@@ -11,12 +11,13 @@ import forge from "../skills/surface-forge-solution/surface/workflow.ts";
 import review from "../skills/surface-code-review/surface/workflow.ts";
 import feedback from "../skills/surface-pr-feedback/surface/workflow.ts";
 import plan from "../skills/surface-plan-large-change/surface/workflow.ts";
+import entropy from "../skills/surface-reduce-entropy/surface/workflow.ts";
 import { browserArgv, configuredBrowser, defaultBrowser, type BrowserCommand } from "./browser.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_ROOT = join(ROOT, "web");
 
-export const WORKFLOWS: AnyWorkflow[] = [forge, review, feedback, plan];
+export const WORKFLOWS: AnyWorkflow[] = [forge, review, feedback, plan, entropy];
 const URL_WIDGET = "surface:url";
 
 /** Registers pi-surface with the given workflows; tests pass their own. */
